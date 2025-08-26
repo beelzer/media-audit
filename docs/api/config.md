@@ -9,7 +9,7 @@ Media Audit uses YAML configuration files with the following top-level sections:
 ```yaml
 scan:          # Scanning and validation options
   # ...
-report:        # Report generation options 
+report:        # Report generation options
   # ...
 ```
 
@@ -19,8 +19,8 @@ The `scan` section controls media discovery, validation, and processing behavior
 
 ### `root_paths`
 
-**Type**: `list[str]`  
-**Required**: Yes  
+**Type**: `list[str]`
+**Required**: Yes
 **Description**: List of root directories to scan for media content.
 
 ```yaml
@@ -33,11 +33,13 @@ scan:
 ```
 
 **Validation**:
+
 - All paths must exist and be readable directories
 - Relative paths are resolved from configuration file location
 - Environment variables are expanded: `"${HOME}/media"`
 
 **Examples**:
+
 ```yaml
 # Unix/Linux paths
 root_paths:
@@ -45,7 +47,7 @@ root_paths:
   - "/media/tv"
   - "/media/anime"
 
-# Windows paths  
+# Windows paths
 root_paths:
   - "D:/Movies"
   - "E:/TV Shows"
@@ -59,45 +61,48 @@ root_paths:
 
 ### `profiles`
 
-**Type**: `list[str]`  
-**Default**: `["all"]`  
+**Type**: `list[str]`
+**Default**: `["all"]`
 **Description**: Media server profiles to use for pattern matching.
 
 ```yaml
 scan:
   profiles:
     - "plex"
-    - "jellyfin" 
+    - "jellyfin"
     - "emby"
 ```
 
 **Valid Values**:
+
 - `"plex"` - Plex Media Server patterns
 - `"jellyfin"` - Jellyfin patterns
-- `"emby"` - Emby patterns  
+- `"emby"` - Emby patterns
 - `"all"` - Combined patterns from all servers
 
 **Behavior**:
+
 - Multiple profiles are merged (union of patterns)
 - Order doesn't matter
 - `"all"` is equivalent to `["plex", "jellyfin", "emby"]`
 
 ### `allowed_codecs`
 
-**Type**: `list[str]`  
-**Default**: `["hevc", "h265", "av1"]`  
+**Type**: `list[str]`
+**Default**: `["hevc", "h265", "av1"]`
 **Description**: List of acceptable video codecs.
 
 ```yaml
 scan:
   allowed_codecs:
     - "hevc"
-    - "h265" 
+    - "h265"
     - "av1"
     - "h264"    # Include if H.264 is acceptable
 ```
 
 **Valid Values**:
+
 - `"hevc"` / `"h265"` - High Efficiency Video Codec
 - `"av1"` - AOMedia Video 1
 - `"h264"` - H.264/AVC (typically flagged for re-encoding)
@@ -107,14 +112,15 @@ scan:
 - `"other"` - Any unrecognized codec
 
 **Notes**:
+
 - Case insensitive matching
 - Videos with non-allowed codecs generate warnings
 - H.264 generates additional re-encoding recommendations
 
 ### `include_patterns` and `exclude_patterns`
 
-**Type**: `list[str]`  
-**Default**: `[]` (empty)  
+**Type**: `list[str]`
+**Default**: `[]` (empty)
 **Description**: Glob patterns for file inclusion/exclusion.
 
 ```yaml
@@ -132,23 +138,25 @@ scan:
 ```
 
 **Pattern Syntax**:
+
 - Standard Unix glob patterns
 - `*` matches any characters except path separator
-- `**` matches any characters including path separator  
+- `**` matches any characters including path separator
 - `?` matches single character
 - `[abc]` matches any character in brackets
 - `{a,b,c}` matches any of the comma-separated patterns
 
 **Processing Order**:
+
 1. Include patterns applied first (if any)
 2. Exclude patterns applied to included files
 3. Empty include list means include all files
 
 ### `concurrent_workers`
 
-**Type**: `int`  
-**Default**: `4`  
-**Range**: `1-32`  
+**Type**: `int`
+**Default**: `4`
+**Range**: `1-32`
 **Description**: Number of concurrent workers for parallel processing.
 
 ```yaml
@@ -157,21 +165,23 @@ scan:
 ```
 
 **Performance Guidelines**:
+
 - **Low-end systems**: 2-4 workers
-- **Mid-range systems**: 4-8 workers  
+- **Mid-range systems**: 4-8 workers
 - **High-end systems**: 8-16 workers
 - **Network storage**: Reduce workers to minimize network load
 - **SSD storage**: Can handle more workers than HDD
 
 **Resource Impact**:
+
 - Each worker consumes ~50-100MB RAM
 - Higher worker count increases CPU usage
 - Network storage may have optimal worker count < CPU cores
 
 ### `cache_enabled`
 
-**Type**: `bool`  
-**Default**: `true`  
+**Type**: `bool`
+**Default**: `true`
 **Description**: Enable/disable caching system.
 
 ```yaml
@@ -180,10 +190,12 @@ scan:
 ```
 
 **Behavior**:
+
 - `true`: Enable caching for faster subsequent scans
 - `false`: Disable caching, always perform fresh analysis
 
 **When to Disable**:
+
 - First-time scans of new libraries
 - Troubleshooting scan issues
 - Testing configuration changes
@@ -191,8 +203,8 @@ scan:
 
 ### `cache_dir`
 
-**Type**: `str`  
-**Default**: `"~/.cache/media-audit"`  
+**Type**: `str`
+**Default**: `"~/.cache/media-audit"`
 **Description**: Directory for cache storage.
 
 ```yaml
@@ -201,19 +213,21 @@ scan:
 ```
 
 **Recommendations**:
+
 - Use fastest available storage (SSD preferred)
 - Ensure sufficient free space (1-5GB for large libraries)
 - Use local storage for network-attached media
 - Consider separate cache per environment
 
 **Path Expansion**:
+
 - `~` expands to user home directory
 - Environment variables are expanded
 - Relative paths resolved from config file location
 
 ### `patterns`
 
-**Type**: `object`  
+**Type**: `object`
 **Description**: Custom pattern definitions for asset matching.
 
 ```yaml
@@ -236,13 +250,15 @@ scan:
 ```
 
 **Pattern Types**:
+
 - `poster_patterns`: Movie/series poster images
 - `background_patterns`: Fanart/backdrop images
-- `banner_patterns`: Series banner images  
+- `banner_patterns`: Series banner images
 - `trailer_patterns`: Trailer video files
 - `title_card_patterns`: Episode thumbnail images
 
 **Pattern Syntax**:
+
 - Python regex patterns (case insensitive)
 - Use `\\` to escape special characters
 - `^` anchors to start of filename
@@ -255,7 +271,7 @@ The `report` section controls report generation and output formatting.
 
 ### `output_path`
 
-**Type**: `str`  
+**Type**: `str`
 **Description**: Path for HTML report output.
 
 ```yaml
@@ -264,13 +280,14 @@ report:
 ```
 
 **Path Handling**:
+
 - Relative paths resolved from current working directory
 - Parent directories created automatically
 - File extension should be `.html`
 
 ### `json_path`
 
-**Type**: `str`  
+**Type**: `str`
 **Description**: Path for JSON report output.
 
 ```yaml
@@ -279,14 +296,15 @@ report:
 ```
 
 **JSON Structure**:
+
 - Machine-readable format
 - Complete scan results
 - Suitable for automation and integration
 
 ### `auto_open`
 
-**Type**: `bool`  
-**Default**: `false`  
+**Type**: `bool`
+**Default**: `false`
 **Description**: Automatically open HTML report in browser.
 
 ```yaml
@@ -295,14 +313,15 @@ report:
 ```
 
 **Behavior**:
+
 - Opens report in default system browser
 - Only applies to HTML reports
 - Useful for interactive usage
 
 ### `show_thumbnails`
 
-**Type**: `bool`  
-**Default**: `true`  
+**Type**: `bool`
+**Default**: `true`
 **Description**: Include thumbnail images in HTML reports.
 
 ```yaml
@@ -311,14 +330,15 @@ report:
 ```
 
 **Impact**:
+
 - `true`: Shows poster thumbnails when available
 - `false`: Text-only report (faster generation)
 - Thumbnails are Base64 encoded in HTML
 
 ### `problems_only`
 
-**Type**: `bool`  
-**Default**: `false`  
+**Type**: `bool`
+**Default**: `false`
 **Description**: Show only items with validation issues.
 
 ```yaml
@@ -327,6 +347,7 @@ report:
 ```
 
 **Filtering**:
+
 - `true`: Only items with errors or warnings
 - `false`: All scanned items regardless of status
 - Reduces report size for large clean libraries
@@ -353,12 +374,13 @@ scan:
     - "${MEDIA_ROOT}/movies"
     - "${MEDIA_ROOT}/tv"
   cache_dir: "${TEMP_DIR}/media-audit-cache"
-  
+
 report:
   output_path: "${REPORT_DIR}/audit-${DATE}.html"
 ```
 
 **Supported Formats**:
+
 - `${VAR}` - Standard format
 - `${VAR:-default}` - With default value
 - `$VAR` - Shell-style (less recommended)
@@ -442,15 +464,15 @@ from media_audit.config import Config
 
 def create_dynamic_config():
     """Create configuration based on runtime conditions."""
-    
+
     # Detect available CPU cores
     worker_count = min(os.cpu_count() or 4, 16)
-    
+
     # Check available storage
     import shutil
     free_space = shutil.disk_usage("/").free
     cache_enabled = free_space > 10 * 1024**3  # Enable if >10GB free
-    
+
     # Environment-specific paths
     if os.name == 'nt':  # Windows
         root_paths = ["D:/Movies", "E:/TV Shows"]
@@ -458,7 +480,7 @@ def create_dynamic_config():
     else:  # Unix-like
         root_paths = ["/mnt/movies", "/mnt/tv"]
         cache_dir = os.path.expanduser("~/.cache/media-audit")
-    
+
     config = Config(
         scan=ScanConfig(
             root_paths=[Path(p) for p in root_paths],
@@ -467,7 +489,7 @@ def create_dynamic_config():
             cache_dir=Path(cache_dir)
         )
     )
-    
+
     return config
 ```
 
@@ -495,7 +517,7 @@ report:
 ### Production Configuration
 
 ```yaml
-# prod-config.yaml  
+# prod-config.yaml
 scan:
   root_paths:
     - "/mnt/movies-4k"
@@ -554,12 +576,12 @@ scan:
     # Production paths
     - "/mnt/prod/movies"
     - "/mnt/prod/tv"
-    # Staging paths  
+    # Staging paths
     - "/mnt/staging/movies"
     - "/mnt/staging/tv"
     # Development paths
     - "/home/dev/test-media"
-  
+
   profiles: ["plex", "jellyfin"]
   allowed_codecs: ["hevc", "av1", "h264"]  # Mixed tolerance
   concurrent_workers: 8
@@ -591,7 +613,7 @@ CONFIG_SCHEMA = {
                     "minItems": 1
                 },
                 "profiles": {
-                    "type": "array", 
+                    "type": "array",
                     "items": {"enum": ["plex", "jellyfin", "emby", "all"]}
                 },
                 "allowed_codecs": {
@@ -642,17 +664,17 @@ from media_audit.config import Config, ValidationError
 
 class CustomConfig(Config):
     """Configuration with additional validation."""
-    
+
     def validate(self):
         """Perform custom validation."""
         super().validate()
-        
+
         # Custom validation rules
         if self.scan.concurrent_workers > os.cpu_count():
             raise ValidationError(
                 f"concurrent_workers ({self.scan.concurrent_workers}) exceeds CPU count ({os.cpu_count()})"
             )
-        
+
         # Validate cache directory
         if self.scan.cache_enabled and self.scan.cache_dir:
             if not self.scan.cache_dir.parent.exists():

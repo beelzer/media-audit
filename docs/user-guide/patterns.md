@@ -5,8 +5,9 @@ Media Audit uses sophisticated pattern matching to identify media assets across 
 ## Overview
 
 Pattern matching in Media Audit identifies:
+
 - **Posters** - Movie/series cover art
-- **Backgrounds** - Fanart/backdrop images  
+- **Backgrounds** - Fanart/backdrop images
 - **Banners** - Series banner images (TV shows only)
 - **Trailers** - Preview videos
 - **Title Cards** - Episode thumbnails (TV episodes only)
@@ -181,18 +182,21 @@ Patterns use Python regex syntax with case-insensitive matching:
 ### Advanced Pattern Examples
 
 #### Multiple File Extensions
+
 ```yaml
 poster_patterns:
   - "^poster\\.(jpg|png|webp)$"  # poster.jpg, poster.png, poster.webp
 ```
 
-#### Year-Based Movie Patterns  
+#### Year-Based Movie Patterns
+
 ```yaml
 poster_patterns:
   - "^.*\\(\\d{4}\\).*poster\\."  # Movie (2023) poster.jpg
 ```
 
 #### Season-Specific Patterns
+
 ```yaml
 poster_patterns:
   - "^Season\\s*\\d{2}\\."        # Season 01.jpg, Season01.jpg
@@ -201,6 +205,7 @@ poster_patterns:
 ```
 
 #### Quality-Based Patterns
+
 ```yaml
 background_patterns:
   - "^fanart.*4k\\."              # fanart-4k.jpg
@@ -228,7 +233,7 @@ When multiple profiles are specified, patterns are combined:
 
 1. **Plex** patterns are added first
 2. **Jellyfin** patterns are merged
-3. **Emby** patterns are merged  
+3. **Emby** patterns are merged
 4. **Duplicates** are removed automatically
 
 ## File Type Support
@@ -236,6 +241,7 @@ When multiple profiles are specified, patterns are combined:
 ### Image Formats
 
 Supported image extensions (case-insensitive):
+
 - `.jpg` / `.jpeg`
 - `.png`
 - `.webp`
@@ -245,6 +251,7 @@ Supported image extensions (case-insensitive):
 ### Video Formats (Trailers)
 
 Supported video extensions:
+
 - `.mp4`
 - `.mkv`
 - `.avi`
@@ -354,6 +361,7 @@ trailer_patterns:
 ### Common Issues
 
 #### Pattern Not Matching
+
 ```bash
 # Check if regex is correct
 python3 -c "
@@ -368,6 +376,7 @@ else:
 ```
 
 #### Too Many False Positives
+
 ```yaml
 # Make patterns more specific
 poster_patterns:
@@ -377,6 +386,7 @@ poster_patterns:
 ```
 
 #### Missing File Extensions
+
 ```yaml
 # Add all possible extensions
 poster_patterns:
@@ -395,7 +405,7 @@ from pathlib import Path
 def test_patterns(directory, patterns):
     """Test patterns against actual files."""
     files = list(Path(directory).glob('*'))
-    
+
     for pattern_str in patterns:
         pattern = re.compile(pattern_str, re.IGNORECASE)
         matches = [f.name for f in files if pattern.search(f.name)]

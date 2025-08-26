@@ -30,6 +30,7 @@ media-audit scan [OPTIONS]
 #### Core Options
 
 ##### `--roots` / `-r`
+
 Specify root directories to scan. Can be used multiple times.
 
 ```bash
@@ -43,12 +44,14 @@ Specify root directories to scan. Can be used multiple times.
 ```
 
 **Details:**
+
 - **Type**: Path (string)
 - **Multiple**: Yes
 - **Required**: Yes (unless specified in config)
 - **Validation**: Must exist and be readable directories
 
 ##### `--config` / `-c`
+
 Path to YAML configuration file.
 
 ```bash
@@ -61,11 +64,13 @@ Path to YAML configuration file.
 ```
 
 **Details:**
+
 - **Type**: Path to existing file
 - **Default**: None
 - **Validation**: File must exist and be valid YAML
 
 ##### `--report` / `-o`
+
 Output path for HTML report.
 
 ```bash
@@ -78,11 +83,13 @@ Output path for HTML report.
 ```
 
 **Details:**
+
 - **Type**: Path (string)
 - **Default**: None (no HTML report generated)
 - **Directory Creation**: Parent directories created automatically
 
 ##### `--json` / `-j`
+
 Output path for JSON report.
 
 ```bash
@@ -95,11 +102,13 @@ Output path for JSON report.
 ```
 
 **Details:**
+
 - **Type**: Path (string)
 - **Default**: None (no JSON report generated)
 - **Format**: Structured JSON data suitable for automation
 
 ##### `--open` / `-O`
+
 Auto-open HTML report in default browser after generation.
 
 ```bash
@@ -108,6 +117,7 @@ Auto-open HTML report in default browser after generation.
 ```
 
 **Details:**
+
 - **Type**: Flag (boolean)
 - **Default**: False
 - **Requires**: HTML report path (`--report`)
@@ -115,6 +125,7 @@ Auto-open HTML report in default browser after generation.
 #### Media Server Options
 
 ##### `--profiles` / `-p`
+
 Media server profiles to use for pattern matching.
 
 ```bash
@@ -128,12 +139,14 @@ Media server profiles to use for pattern matching.
 ```
 
 **Details:**
+
 - **Type**: String choices
 - **Choices**: `plex`, `jellyfin`, `emby`, `all`
 - **Multiple**: Yes
 - **Default**: `["all"]`
 
 ##### `--patterns`
+
 Path to custom patterns YAML file.
 
 ```bash
@@ -144,12 +157,14 @@ Path to custom patterns YAML file.
 ```
 
 **Details:**
+
 - **Type**: Path to existing file
 - **Validation**: Must be valid YAML with pattern definitions
 
 #### Video Codec Options
 
 ##### `--allow-codecs`
+
 Specify allowed video codecs.
 
 ```bash
@@ -161,6 +176,7 @@ Specify allowed video codecs.
 ```
 
 **Details:**
+
 - **Type**: String choices
 - **Choices**: `hevc`, `h265`, `av1`, `h264`, `vp9`, `mpeg4`, `mpeg2`
 - **Multiple**: Yes
@@ -170,6 +186,7 @@ Specify allowed video codecs.
 #### Filtering Options
 
 ##### `--include`
+
 Include patterns for file matching.
 
 ```bash
@@ -181,11 +198,13 @@ Include patterns for file matching.
 ```
 
 **Details:**
+
 - **Type**: Glob patterns
 - **Multiple**: Yes
 - **Applied**: Before scanning begins
 
 ##### `--exclude`
+
 Exclude patterns for file matching.
 
 ```bash
@@ -197,11 +216,13 @@ Exclude patterns for file matching.
 ```
 
 **Details:**
+
 - **Type**: Glob patterns
 - **Multiple**: Yes
 - **Applied**: After include patterns
 
 ##### `--problems-only`
+
 Show only items with validation issues in reports.
 
 ```bash
@@ -209,6 +230,7 @@ Show only items with validation issues in reports.
 ```
 
 **Details:**
+
 - **Type**: Flag (boolean)
 - **Default**: False
 - **Effect**: Filters report content, not scan process
@@ -216,6 +238,7 @@ Show only items with validation issues in reports.
 #### Performance Options
 
 ##### `--workers` / `-w`
+
 Number of concurrent workers for parallel processing.
 
 ```bash
@@ -228,12 +251,14 @@ Number of concurrent workers for parallel processing.
 ```
 
 **Details:**
+
 - **Type**: Integer
 - **Default**: 4
 - **Range**: 1-32 (practical limit)
 - **Recommendation**: CPU cores × 1.5
 
 ##### `--no-cache`
+
 Disable caching system for fresh scan.
 
 ```bash
@@ -241,6 +266,7 @@ Disable caching system for fresh scan.
 ```
 
 **Details:**
+
 - **Type**: Flag (boolean)
 - **Default**: False (caching enabled)
 - **Effect**: Forces re-analysis of all files
@@ -272,6 +298,7 @@ media-audit init-config OUTPUT_PATH
 #### Arguments
 
 ##### `OUTPUT_PATH`
+
 Path where the configuration file will be created.
 
 ```bash
@@ -280,6 +307,7 @@ media-audit init-config /etc/media-audit/config.yaml
 ```
 
 **Details:**
+
 - **Type**: Path (string)
 - **Required**: Yes
 - **Validation**: Parent directory must be writable
@@ -361,6 +389,7 @@ esac
 ### Configuration
 
 #### `MEDIA_AUDIT_CONFIG`
+
 Default configuration file path.
 
 ```bash
@@ -369,6 +398,7 @@ media-audit scan  # Uses config from environment variable
 ```
 
 #### `MEDIA_AUDIT_CACHE_DIR`
+
 Override default cache directory.
 
 ```bash
@@ -377,6 +407,7 @@ media-audit scan --roots /media
 ```
 
 #### `MEDIA_AUDIT_WORKERS`
+
 Default number of workers.
 
 ```bash
@@ -387,6 +418,7 @@ media-audit scan --roots /media  # Uses 8 workers by default
 ### Debugging
 
 #### `MEDIA_AUDIT_DEBUG`
+
 Enable debug logging.
 
 ```bash
@@ -395,6 +427,7 @@ media-audit scan --roots /media  # Shows detailed logging
 ```
 
 #### `MEDIA_AUDIT_VERBOSE`
+
 Enable verbose output.
 
 ```bash
@@ -405,6 +438,7 @@ media-audit scan --roots /media
 ### Integration
 
 #### `MEDIA_AUDIT_NO_COLOR`
+
 Disable colored output (useful for CI/CD).
 
 ```bash
@@ -413,6 +447,7 @@ media-audit scan --roots /media  # Plain text output
 ```
 
 #### `MEDIA_AUDIT_BATCH_MODE`
+
 Enable batch mode (no interactive prompts).
 
 ```bash
@@ -425,7 +460,8 @@ media-audit scan --roots /media
 ### Console Output
 
 #### Progress Display
-```
+
+```text
 📺 Media Audit Scanner
 
 Scanning 2 root path(s)...
@@ -459,7 +495,8 @@ Cache: 850 hits, 150 misses (85.0% hit rate)
 ```
 
 #### Error Display
-```
+
+```text
 ✗ Error: No root paths specified. Use --roots or provide a config file.
 
 ✗ Error: Root path does not exist: /nonexistent/path
@@ -472,16 +509,19 @@ Cache: 850 hits, 150 misses (85.0% hit rate)
 ### Interactive Features
 
 #### Keyboard Controls
+
 - **ESC**: Cancel running scan
 - **Ctrl+C**: Force quit (emergency stop)
 
 #### Progress Indicators
+
 - Spinner for discovery phase
 - Progress bars for processing phases
 - Real-time item counts and names
 
 ### Report Generation Messages
-```
+
+```text
 Generating HTML report: audit.html
 Generating JSON report: audit.json
 ```
@@ -612,6 +652,7 @@ media-audit scan \
 ### Common Error Scenarios
 
 #### Invalid Configuration
+
 ```bash
 media-audit scan --config invalid.yaml
 # Output: Error: Configuration file contains invalid YAML syntax
@@ -619,6 +660,7 @@ media-audit scan --config invalid.yaml
 ```
 
 #### Permission Issues
+
 ```bash
 media-audit scan --roots /protected/directory
 # Output: Error: Permission denied accessing /protected/directory
@@ -626,6 +668,7 @@ media-audit scan --roots /protected/directory
 ```
 
 #### Missing Dependencies
+
 ```bash
 # When ffprobe is not available
 media-audit scan --roots /media
@@ -634,6 +677,7 @@ media-audit scan --roots /media
 ```
 
 #### Disk Space Issues
+
 ```bash
 media-audit scan --roots /media --report /full/disk/report.html
 # Output: Error: Insufficient disk space for report generation
@@ -643,12 +687,15 @@ media-audit scan --roots /media --report /full/disk/report.html
 ### Recovery Strategies
 
 #### Graceful Degradation
-- Missing ffprobe: Skip video analysis but continue with asset validation
+
+- Missing FFprobe: Skip video analysis but continue with asset validation
 - Cache issues: Disable cache and continue with direct scanning
 - Permission errors: Skip inaccessible directories but process others
 
 #### Error Messages
+
 All error messages include:
+
 - Clear description of the problem
 - Suggested resolution steps
 - Relevant file paths or configuration keys

@@ -9,6 +9,7 @@
 ## Key Features
 
 ### 🎬 Smart Media Detection
+
 - **Automatic parsing** of movie and TV show filenames
 - **Pattern matching** for various naming conventions
 - **Season/Episode detection** for TV shows
@@ -16,6 +17,7 @@
 - **Source detection** (BluRay, WEB-DL, HDTV, etc.)
 
 ### 🔍 Deep Media Analysis
+
 - **FFprobe integration** for technical metadata extraction
 - **Video codec** detection (H.264, H.265/HEVC, AV1, etc.)
 - **Audio codec** detection (AAC, AC3, DTS, TrueHD, etc.)
@@ -24,6 +26,7 @@
 - **Subtitle** stream detection
 
 ### ✅ Comprehensive Validation
+
 - **File integrity** checking
 - **Missing episode** detection
 - **Duplicate** identification
@@ -32,6 +35,7 @@
 - **Customizable validation rules**
 
 ### 📊 Beautiful Reports
+
 - **Interactive HTML reports** with filtering and sorting
 - **JSON export** for programmatic processing
 - **Summary statistics** and insights
@@ -39,6 +43,7 @@
 - **Performance metrics** and scan times
 
 ### ⚡ Performance & Efficiency
+
 - **Intelligent caching** system to speed up repeated scans
 - **Parallel processing** support
 - **Configurable scan depth** and filters
@@ -64,7 +69,7 @@ media-audit scan /path/to/media --output report.json --format json
 
 Media Audit generates comprehensive reports that help you understand and improve your media library:
 
-```
+```text
 📊 Scan Summary
 ──────────────────────────────────────
 Total Files Scanned: 1,247
@@ -89,18 +94,21 @@ Issues Found:
 ## Why Media Audit?
 
 ### For Home Media Servers
+
 - Ensure your Plex/Jellyfin/Emby library is properly organized
 - Identify missing episodes in your TV show collections
 - Find duplicate movies taking up space
 - Verify all files follow consistent naming conventions
 
 ### For Content Creators
+
 - Validate video encoding settings across projects
 - Ensure consistent quality standards
 - Track media assets and their technical specifications
 - Generate reports for clients or team members
 
 ### For Archivists
+
 - Document technical metadata for preservation
 - Verify file integrity over time
 - Track storage usage and compression efficiency

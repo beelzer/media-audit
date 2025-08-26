@@ -24,7 +24,8 @@ class MediaItem:
 #### Properties
 
 ##### `status`
-**Type**: `ValidationStatus`  
+
+**Type**: `ValidationStatus`
 **Description**: Overall validation status derived from issues.
 
 ```python
@@ -39,16 +40,18 @@ def status(self) -> ValidationStatus:
 ```
 
 **Values**:
+
 - `ValidationStatus.VALID`: No issues found
-- `ValidationStatus.WARNING`: Non-critical issues present  
+- `ValidationStatus.WARNING`: Non-critical issues present
 - `ValidationStatus.ERROR`: Critical issues requiring attention
 
 ##### `has_issues`
-**Type**: `bool`  
+
+**Type**: `bool`
 **Description**: Quick check for any validation issues.
 
 ```python
-@property  
+@property
 def has_issues(self) -> bool:
     """Check if item has any issues."""
     return len(self.issues) > 0
@@ -61,7 +64,7 @@ def has_issues(self) -> bool:
 if item.status == ValidationStatus.ERROR:
     print(f"Critical issues in {item.name}")
 
-# Iterate through issues  
+# Iterate through issues
 for issue in item.issues:
     print(f"{issue.severity}: {issue.message}")
 
@@ -81,7 +84,7 @@ from enum import Enum, auto
 
 class MediaType(Enum):
     MOVIE = auto()
-    TV_SERIES = auto() 
+    TV_SERIES = auto()
     TV_SEASON = auto()
     TV_EPISODE = auto()
 ```
@@ -103,6 +106,7 @@ class MovieItem(MediaItem):
 ```
 
 #### Automatic Fields
+
 - `type`: Automatically set to `MediaType.MOVIE`
 
 #### Usage Examples
@@ -143,12 +147,14 @@ class SeriesItem(MediaItem):
 ```
 
 #### Automatic Fields
+
 - `type`: Automatically set to `MediaType.TV_SERIES`
 - `total_episodes`: Automatically updated when seasons are modified
 
 #### Methods
 
 ##### `update_episode_count()`
+
 Updates the total episode count from all seasons.
 
 ```python
@@ -194,6 +200,7 @@ class SeasonItem(MediaItem):
 ```
 
 #### Automatic Fields
+
 - `type`: Automatically set to `MediaType.TV_SEASON`
 
 #### Usage Examples
@@ -233,6 +240,7 @@ class EpisodeItem(MediaItem):
 ```
 
 #### Automatic Fields
+
 - `type`: Automatically set to `MediaType.TV_EPISODE`
 
 #### Usage Examples
@@ -290,8 +298,8 @@ has_background = bool(assets.backgrounds)
 has_trailer = bool(assets.trailers)
 
 # Count total assets
-total_assets = (len(assets.posters) + len(assets.backgrounds) + 
-                len(assets.banners) + len(assets.trailers) + 
+total_assets = (len(assets.posters) + len(assets.backgrounds) +
+                len(assets.banners) + len(assets.trailers) +
                 len(assets.title_cards))
 
 # Get first poster (if available)
@@ -399,6 +407,7 @@ class ValidationIssue:
 ```
 
 #### Common Categories
+
 - `"assets"` - Missing or invalid assets
 - `"encoding"` - Video encoding issues
 - `"structure"` - Directory/file structure issues
@@ -417,7 +426,7 @@ missing_poster = ValidationIssue(
 )
 
 codec_warning = ValidationIssue(
-    category="encoding", 
+    category="encoding",
     message="Video uses non-preferred codec: h264",
     severity=ValidationStatus.WARNING,
     details={"codec": "h264", "file": "movie.mkv"}
@@ -454,11 +463,13 @@ class ScanResult:
 ```
 
 #### Automatic Updates
+
 Statistics are automatically updated when the object is created or modified.
 
 #### Methods
 
 ##### `update_stats()`
+
 Recalculates total items and issues from current data.
 
 ```python
@@ -469,24 +480,25 @@ def update_stats(self) -> None:
         sum(len(movie.issues) for movie in self.movies) +
         sum(len(series.issues) for series in self.series) +
         sum(len(season.issues) for series in self.series for season in series.seasons) +
-        sum(len(episode.issues) for series in self.series 
+        sum(len(episode.issues) for series in self.series
             for season in series.seasons for episode in season.episodes)
     )
 ```
 
 ##### `get_items_with_issues()`
+
 Returns all items that have validation issues.
 
 ```python
 def get_items_with_issues(self) -> list[MediaItem]:
     """Get all items with validation issues."""
     items = []
-    
+
     # Add movies with issues
     for movie in self.movies:
         if movie.has_issues:
             items.append(movie)
-    
+
     # Add series, seasons, and episodes with issues
     for series in self.series:
         if series.has_issues:
@@ -497,7 +509,7 @@ def get_items_with_issues(self) -> list[MediaItem]:
             for episode in season.episodes:
                 if episode.has_issues:
                     items.append(episode)
-    
+
     return items
 ```
 
@@ -535,7 +547,7 @@ print(f"Errors: {error_count}, Warnings: {warning_count}")
 
 ### Hierarchy Structure
 
-```
+```text
 ScanResult
 ├── movies: list[MovieItem]
 │   ├── assets: MediaAssets
@@ -560,10 +572,10 @@ ScanResult
 # Navigate through hierarchy
 for series in result.series:
     print(f"Series: {series.name}")
-    
+
     for season in series.seasons:
         print(f"  Season {season.season_number}: {len(season.episodes)} episodes")
-        
+
         for episode in season.episodes:
             episode_id = f"S{episode.season_number:02d}E{episode.episode_number:02d}"
             status_icon = "❌" if episode.has_issues else "✅"
@@ -577,7 +589,7 @@ for movie in result.movies:
     if movie.video_info and movie.video_info.codec == CodecType.H264:
         h264_videos.append(movie.video_info.path)
 
-# Check TV episodes  
+# Check TV episodes
 for series in result.series:
     for season in series.seasons:
         for episode in season.episodes:
@@ -635,7 +647,7 @@ def serialize_movie(movie: MovieItem) -> dict:
         "source": movie.source,
         "release_group": movie.release_group
     })
-    
+
     if movie.video_info:
         data["video_info"] = {
             "path": str(movie.video_info.path),
@@ -645,7 +657,7 @@ def serialize_movie(movie: MovieItem) -> dict:
             "bitrate": movie.video_info.bitrate,
             "size": movie.video_info.size
         }
-    
+
     return data
 
 # Usage
@@ -659,7 +671,7 @@ with open("movie.json", "w") as f:
 ```python
 def deserialize_movie(data: dict) -> MovieItem:
     """Deserialize dictionary to MovieItem."""
-    
+
     # Create assets
     assets = MediaAssets(
         posters=[Path(p) for p in data.get("assets", {}).get("posters", [])],
@@ -668,7 +680,7 @@ def deserialize_movie(data: dict) -> MovieItem:
         trailers=[Path(p) for p in data.get("assets", {}).get("trailers", [])],
         title_cards=[Path(p) for p in data.get("assets", {}).get("title_cards", [])]
     )
-    
+
     # Create validation issues
     issues = []
     for issue_data in data.get("issues", []):
@@ -679,7 +691,7 @@ def deserialize_movie(data: dict) -> MovieItem:
             details=issue_data.get("details", {})
         )
         issues.append(issue)
-    
+
     # Create video info if present
     video_info = None
     if "video_info" in data and data["video_info"]:
@@ -692,7 +704,7 @@ def deserialize_movie(data: dict) -> MovieItem:
             bitrate=vi_data.get("bitrate"),
             size=vi_data.get("size", 0)
         )
-    
+
     # Create movie
     movie = MovieItem(
         path=Path(data["path"]),
@@ -708,7 +720,7 @@ def deserialize_movie(data: dict) -> MovieItem:
         release_group=data.get("release_group"),
         video_info=video_info
     )
-    
+
     return movie
 
 # Usage

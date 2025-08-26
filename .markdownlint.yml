@@ -17,39 +17,39 @@ MD007:
   indent: 2
 
 # MD013/line-length - Line length
-MD013: false  # Disabled as we allow long lines in documentation
+MD013: false # Disabled as we allow long lines in documentation
 
 # MD024/no-duplicate-heading - Multiple headings with the same content
 MD024:
-  siblings_only: true  # Allow same heading in different sections
+  siblings_only: true # Allow same heading in different sections
 
 # MD025/single-title/single-h1 - Multiple top-level headings in the same document
 MD025:
-  front_matter_title: ""  # Ignore front matter title
+  front_matter_title: "" # Ignore front matter title
 
 # MD026/no-trailing-punctuation - Trailing punctuation in heading
 MD026:
-  punctuation: ".,;:!。，；：！"  # Remove ? from the default list
+  punctuation: ".,;:!。，；：！" # Remove ? from the default list
 
 # MD029/ol-prefix - Ordered list item prefix
 MD029:
   style: "ordered"
 
 # MD033/no-inline-html - Inline HTML
-MD033: false  # Allow inline HTML for advanced formatting
+MD033: false # Allow inline HTML for advanced formatting
 
 # MD035/hr-style - Horizontal rule style
 MD035:
   style: "---"
 
 # MD036/no-emphasis-as-heading - Emphasis used instead of a heading
-MD036: false  # Sometimes we want to emphasize without making it a heading
+MD036: false # Sometimes we want to emphasize without making it a heading
 
 # MD040/fenced-code-language - Fenced code blocks should have a language specified
 MD040: true
 
 # MD041/first-line-heading/first-line-h1 - First line in a file should be a top-level heading
-MD041: false  # Not required for all documentation files
+MD041: false # Not required for all documentation files
 
 # MD042/no-empty-links - No empty links
 MD042: true
@@ -73,7 +73,7 @@ MD044:
   html_elements: false
 
 # MD046/code-block-style - Code block style
-MD046: false  # Allow both fenced and indented code blocks
+MD046: false # Allow both fenced and indented code blocks
 
 # MD047/single-trailing-newline - Files should end with a single newline character
 MD047: true

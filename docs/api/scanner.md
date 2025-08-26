@@ -15,7 +15,7 @@ from pathlib import Path
 
 class MediaScanner:
     """Scans media libraries and validates content."""
-    
+
     def __init__(self, config: ScanConfig):
         """Initialize scanner with configuration."""
 ```
@@ -35,23 +35,28 @@ scanner = MediaScanner(config)
 #### Properties
 
 ##### `config`
-**Type**: `ScanConfig`  
+
+**Type**: `ScanConfig`
 **Description**: Scanner configuration settings.
 
 ##### `cache`
-**Type**: `MediaCache`  
+
+**Type**: `MediaCache`
 **Description**: Caching system for performance optimization.
 
 ##### `movie_parser`
-**Type**: `MovieParser`  
+
+**Type**: `MovieParser`
 **Description**: Parser for movie directories.
 
 ##### `tv_parser`
-**Type**: `TVParser`  
+
+**Type**: `TVParser`
 **Description**: Parser for TV show directories.
 
 ##### `validator`
-**Type**: `MediaValidator`  
+
+**Type**: `MediaValidator`
 **Description**: Validation system for media items.
 
 ### Primary Methods
@@ -68,6 +73,7 @@ def scan(self) -> ScanResult:
 **Returns**: `ScanResult` containing all discovered media items and statistics.
 
 **Features**:
+
 - Concurrent processing with configurable workers
 - Progress reporting with interactive indicators
 - Keyboard interrupt handling (ESC to cancel)
@@ -75,6 +81,7 @@ def scan(self) -> ScanResult:
 - Error collection and reporting
 
 **Example**:
+
 ```python
 result = scanner.scan()
 print(f"Found {result.total_items} items with {result.total_issues} issues")
@@ -106,16 +113,16 @@ graph TD
     C -->|Yes| E[Scan TV Shows]
     B -->|No| F[Mixed Content Scan]
     C -->|No| F
-    
+
     D --> G[Movie Parser]
     E --> H[TV Parser]
     F --> I[Auto-detect Type]
-    
+
     G --> J[Validate Movie]
     H --> K[Validate TV Show]
     I --> G
     I --> H
-    
+
     J --> L[Results]
     K --> L
 ```
@@ -123,7 +130,8 @@ graph TD
 ### Supported Directory Structures
 
 #### Standard Structure
-```
+
+```text
 Root/
 ├── Movies/
 │   ├── Movie 1 (2020)/
@@ -134,7 +142,8 @@ Root/
 ```
 
 #### Mixed Structure
-```
+
+```text
 Root/
 ├── Movie 1 (2020)/
 ├── Movie 2 (2021)/
@@ -154,6 +163,7 @@ def _scan_path(self, path: Path, result: ScanResult, progress: Progress | None =
 ```
 
 **Parameters**:
+
 - `path`: Root path to scan
 - `result`: Results container to populate
 - `progress`: Optional progress reporter
@@ -174,12 +184,14 @@ def _scan_movies(
 ```
 
 **Parameters**:
+
 - `movies_dir`: Directory containing movie folders
-- `result`: Results container to populate  
+- `result`: Results container to populate
 - `progress`: Optional progress reporter
 - `force_type`: Force content type detection
 
 **Features**:
+
 - Concurrent processing with ThreadPoolExecutor
 - Progress tracking per movie
 - Error handling and collection
@@ -201,6 +213,7 @@ def _scan_tv_shows(
 ```
 
 **Parameters**:
+
 - `tv_dir`: Directory containing TV show folders
 - `result`: Results container to populate
 - `progress`: Optional progress reporter
@@ -218,6 +231,7 @@ def _scan_mixed_content(
 ```
 
 **Features**:
+
 - Automatic content type detection
 - TV show detection prioritized (more specific structure)
 - Fallback to movie detection
@@ -232,6 +246,7 @@ def _process_movie(self, directory: Path) -> MovieItem | None:
 ```
 
 **Process**:
+
 1. Parse directory with `MovieParser`
 2. Validate with `MediaValidator`
 3. Return processed `MovieItem`
@@ -246,6 +261,7 @@ def _process_series(self, directory: Path) -> SeriesItem | None:
 ```
 
 **Process**:
+
 1. Parse directory with `TVParser`
 2. Validate with `MediaValidator`
 3. Return processed `SeriesItem`
@@ -280,6 +296,7 @@ with Progress(
 #### Cancellation Support
 
 Users can cancel scans using:
+
 - **ESC Key**: Graceful cancellation
 - **Ctrl+C**: Emergency termination
 
@@ -288,7 +305,7 @@ def _check_for_esc(self) -> None:
     """Monitor for ESC key press on Windows."""
     if sys.platform == "win32":
         import msvcrt
-        
+
         while not self._cancelled:
             if msvcrt.kbhit():
                 key = msvcrt.getch()
@@ -330,12 +347,14 @@ if self.config.concurrent_workers > 1:
 ### Worker Configuration
 
 **Guidelines**:
+
 - **Default**: 4 workers
 - **CPU-bound**: CPU cores × 1.5
 - **I/O-bound**: CPU cores × 2-3
 - **Network storage**: Reduce workers to minimize load
 
 **Performance Impact**:
+
 ```python
 # Conservative (network storage)
 config = ScanConfig(concurrent_workers=2)
@@ -365,6 +384,7 @@ except Exception as e:
 ### Error Types
 
 #### Path Errors
+
 ```python
 if not root_path.exists():
     result.errors.append(f"Root path does not exist: {root_path}")
@@ -372,6 +392,7 @@ if not root_path.exists():
 ```
 
 #### Permission Errors
+
 ```python
 try:
     for item in directory.iterdir():
@@ -381,6 +402,7 @@ except PermissionError:
 ```
 
 #### Processing Errors
+
 ```python
 except Exception as e:
     result.errors.append(f"Error processing {item_path}: {e}")
@@ -404,7 +426,7 @@ The scanner integrates with the caching system for performance:
 ```python
 # Initialize cache
 self.cache = MediaCache(
-    cache_dir=config.cache_dir, 
+    cache_dir=config.cache_dir,
     enabled=config.cache_enabled
 )
 
@@ -439,35 +461,35 @@ from media_audit.scanner import MediaScanner
 
 class CustomScanner(MediaScanner):
     """Custom scanner with additional functionality."""
-    
+
     def __init__(self, config: ScanConfig, custom_options: dict = None):
         super().__init__(config)
         self.custom_options = custom_options or {}
-    
+
     def scan(self) -> ScanResult:
         """Enhanced scan with custom processing."""
         # Pre-scan hook
         self.pre_scan_hook()
-        
+
         # Run standard scan
         result = super().scan()
-        
+
         # Post-scan hook
         self.post_scan_hook(result)
-        
+
         return result
-    
+
     def pre_scan_hook(self):
         """Called before scanning starts."""
         print("Starting custom scan...")
-    
+
     def post_scan_hook(self, result: ScanResult):
         """Called after scanning completes."""
         print(f"Custom scan completed: {result.total_items} items")
-        
+
         # Custom analysis
         self.analyze_results(result)
-    
+
     def analyze_results(self, result: ScanResult):
         """Perform custom analysis on results."""
         # Example: Find duplicate movies
@@ -491,12 +513,12 @@ result = custom_scanner.scan()
 ```python
 class MovieScanner(MediaScanner):
     """Scanner specialized for movie libraries."""
-    
+
     def _scan_path(self, path: Path, result: ScanResult, progress=None):
         """Only scan for movies."""
         # Look for Movies directory or treat root as movies
         movies_dir = path / "Movies" if (path / "Movies").exists() else path
-        
+
         if movies_dir.exists():
             self._scan_movies(movies_dir, result, progress)
 ```
@@ -506,7 +528,7 @@ class MovieScanner(MediaScanner):
 ```python
 class TVScanner(MediaScanner):
     """Scanner specialized for TV libraries."""
-    
+
     def _scan_path(self, path: Path, result: ScanResult, progress=None):
         """Only scan for TV shows."""
         # Look for TV directories
@@ -535,35 +557,35 @@ class ScanEvent:
 
 class EventDrivenScanner(MediaScanner):
     """Scanner with event callbacks."""
-    
+
     def __init__(self, config: ScanConfig):
         super().__init__(config)
         self.callbacks: dict[str, list[Callable]] = {}
-    
+
     def on(self, event_type: str, callback: Callable):
         """Register event callback."""
         if event_type not in self.callbacks:
             self.callbacks[event_type] = []
         self.callbacks[event_type].append(callback)
-    
+
     def emit(self, event_type: str, data: dict = None):
         """Emit event to registered callbacks."""
         event = ScanEvent(event_type, data or {})
         for callback in self.callbacks.get(event_type, []):
             callback(event)
-    
+
     def _process_movie(self, directory: Path) -> MovieItem | None:
         """Enhanced movie processing with events."""
         self.emit("movie_start", {"path": str(directory)})
-        
+
         movie = super()._process_movie(directory)
-        
+
         if movie:
             self.emit("movie_complete", {"movie": movie})
-            
+
             if movie.has_issues:
                 self.emit("movie_issues", {"movie": movie, "issues": movie.issues})
-        
+
         return movie
 
 # Usage
@@ -582,31 +604,31 @@ result = scanner.scan()
 ```python
 class BatchScanner:
     """Scanner that processes items in batches."""
-    
+
     def __init__(self, scanner: MediaScanner, batch_size: int = 100):
         self.scanner = scanner
         self.batch_size = batch_size
-    
+
     def scan_in_batches(self) -> Iterator[ScanResult]:
         """Scan and yield results in batches."""
         all_dirs = self.discover_all_directories()
-        
+
         for i in range(0, len(all_dirs), self.batch_size):
             batch_dirs = all_dirs[i:i + self.batch_size]
             batch_result = self.process_batch(batch_dirs)
             yield batch_result
-    
+
     def discover_all_directories(self) -> list[Path]:
         """Discover all media directories."""
         directories = []
-        
+
         for root_path in self.scanner.config.root_paths:
             for item in root_path.rglob("*"):
                 if item.is_dir() and self.is_media_directory(item):
                     directories.append(item)
-        
+
         return directories
-    
+
     def is_media_directory(self, path: Path) -> bool:
         """Check if directory contains media."""
         # Check for video files
@@ -631,41 +653,41 @@ for batch_result in batch_scanner.scan_in_batches():
 ```python
 class MemoryEfficientScanner(MediaScanner):
     """Scanner optimized for low memory usage."""
-    
+
     def scan(self) -> ScanResult:
         """Memory-efficient scanning."""
         import gc
-        
+
         # Initial scan
         result = ScanResult(
             scan_time=datetime.now(),
             duration=0,
             root_paths=self.config.root_paths
         )
-        
+
         # Process in smaller batches
         for root_path in self.config.root_paths:
             self.scan_path_efficiently(root_path, result)
-            
+
             # Force garbage collection between paths
             gc.collect()
-        
+
         result.duration = time.time() - start_time
         return result
-    
+
     def scan_path_efficiently(self, path: Path, result: ScanResult):
         """Memory-efficient path scanning."""
         # Process movies in smaller batches
         movies_dir = path / "Movies"
         if movies_dir.exists():
             movie_dirs = list(movies_dir.iterdir())
-            
+
             # Process in chunks to limit memory usage
             chunk_size = 20
             for i in range(0, len(movie_dirs), chunk_size):
                 chunk = movie_dirs[i:i + chunk_size]
                 self.process_movie_chunk(chunk, result)
-                
+
                 # Clear references and force GC
                 del chunk
                 gc.collect()
@@ -679,42 +701,42 @@ from concurrent.futures import ProcessPoolExecutor
 
 class ParallelScanner:
     """Scanner using process-based parallelism."""
-    
+
     def __init__(self, config: ScanConfig):
         self.config = config
         self.process_count = min(mp.cpu_count(), config.concurrent_workers)
-    
+
     def scan_parallel(self) -> ScanResult:
         """Scan using multiple processes."""
         all_dirs = self.discover_directories()
-        
+
         # Split work among processes
         chunk_size = len(all_dirs) // self.process_count
         chunks = [
-            all_dirs[i:i + chunk_size] 
+            all_dirs[i:i + chunk_size]
             for i in range(0, len(all_dirs), chunk_size)
         ]
-        
+
         # Process chunks in parallel
         with ProcessPoolExecutor(max_workers=self.process_count) as executor:
             futures = [
                 executor.submit(process_directory_chunk, chunk, self.config)
                 for chunk in chunks
             ]
-            
+
             # Combine results
             combined_result = ScanResult(
                 scan_time=datetime.now(),
                 duration=0,
                 root_paths=self.config.root_paths
             )
-            
+
             for future in concurrent.futures.as_completed(futures):
                 chunk_result = future.result()
                 combined_result.movies.extend(chunk_result.movies)
                 combined_result.series.extend(chunk_result.series)
                 combined_result.errors.extend(chunk_result.errors)
-            
+
             combined_result.update_stats()
             return combined_result
 

@@ -309,7 +309,7 @@ Recommended extensions and settings:
 ### PyCharm/IntelliJ
 
 1. **Open Project**: Open the media-audit directory
-2. **Set Python Interpreter**: 
+2. **Set Python Interpreter**:
    - File → Settings → Project → Python Interpreter
    - Add Interpreter → Existing Environment
    - Select `.venv/bin/python` (or `.venv\Scripts\python.exe` on Windows)
@@ -332,7 +332,7 @@ return {
         "neovim/nvim-lspconfig",
         config = function()
             local lspconfig = require('lspconfig')
-            
+
             -- Python LSP (Pyright)
             lspconfig.pyright.setup{
                 settings = {
@@ -344,12 +344,12 @@ return {
                     }
                 }
             }
-            
+
             -- Ruff LSP
             lspconfig.ruff_lsp.setup{}
         end
     },
-    
+
     -- Formatting
     {
         "stevearc/conform.nvim",
@@ -444,7 +444,7 @@ touch "test-data/movies/The Matrix (1999)/The Matrix (1999).mkv"
 touch "test-data/movies/The Matrix (1999)/poster.jpg"
 touch "test-data/movies/The Matrix (1999)/fanart.jpg"
 
-# Example TV structure  
+# Example TV structure
 mkdir -p "test-data/tv/Breaking Bad/Season 01"
 touch "test-data/tv/Breaking Bad/poster.jpg"
 touch "test-data/tv/Breaking Bad/fanart.jpg"
@@ -472,15 +472,15 @@ def sample_movie_dir(tmp_path):
     """Create sample movie directory structure."""
     movie_dir = tmp_path / "The Matrix (1999)"
     movie_dir.mkdir()
-    
+
     # Create video file
     video_file = movie_dir / "The Matrix (1999).mkv"
     video_file.write_text("fake video content")
-    
+
     # Create assets
     (movie_dir / "poster.jpg").write_bytes(b"fake image")
     (movie_dir / "fanart.jpg").write_bytes(b"fake image")
-    
+
     return movie_dir
 
 @pytest.fixture
@@ -488,23 +488,23 @@ def sample_tv_dir(tmp_path):
     """Create sample TV show directory structure."""
     series_dir = tmp_path / "Breaking Bad"
     series_dir.mkdir()
-    
+
     # Series assets
     (series_dir / "poster.jpg").write_bytes(b"fake image")
     (series_dir / "fanart.jpg").write_bytes(b"fake image")
-    
+
     # Season directory
     season_dir = series_dir / "Season 01"
     season_dir.mkdir()
-    
+
     # Season assets
     (series_dir / "Season01.jpg").write_bytes(b"fake image")
-    
+
     # Episode
     episode_file = season_dir / "S01E01.mkv"
     episode_file.write_text("fake video content")
     (season_dir / "S01E01.jpg").write_bytes(b"fake image")
-    
+
     return series_dir
 ```
 
@@ -661,6 +661,7 @@ mypy --config-file pyproject.toml src
 2. **Search Issues**: Look through GitHub issues for similar problems
 3. **Ask Questions**: Open a GitHub discussion or issue
 4. **Debug Mode**: Run with debug logging enabled:
+
    ```bash
    export MEDIA_AUDIT_DEBUG=1
    media-audit scan --roots test-data

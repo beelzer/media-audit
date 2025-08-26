@@ -12,7 +12,7 @@ Media Audit requires Python 3.13 or newer. Check your Python version:
 python --version
 ```
 
-If you need to install or upgrade Python, visit [python.org](https://www.python.org/downloads/).
+If you need to install or upgrade Python, visit [Python.org](https://www.python.org/downloads/).
 
 ### FFmpeg
 
@@ -117,7 +117,7 @@ media-audit --version
 
 You should see output like:
 
-```
+```text
 media-audit, version 0.1.0
 ```
 
@@ -201,10 +201,12 @@ If Media Audit reports FFmpeg is not found:
 
 1. Ensure FFmpeg is installed (see Prerequisites)
 2. Verify FFmpeg is in your system PATH:
+
    ```bash
    which ffmpeg  # Linux/macOS
    where ffmpeg  # Windows
    ```
+
 3. If using Docker, FFmpeg is included in the image
 
 ### Permission Errors
@@ -229,10 +231,13 @@ If you get import errors after installation:
 
 1. Ensure you're using the correct Python version (3.13+)
 2. Check if Media Audit is installed in the active environment:
+
    ```bash
    pip show media-audit
    ```
+
 3. Try reinstalling with dependencies:
+
    ```bash
    pip install --upgrade --force-reinstall media-audit
    ```

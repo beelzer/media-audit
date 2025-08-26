@@ -19,18 +19,21 @@ media-audit scan --roots "D:\Media" --problems-only --report issues.html
 ### Features
 
 #### Interactive Interface
+
 - **Search Bar**: Find specific movies or TV shows quickly
 - **Filter Options**: Show/hide different types of issues
 - **Sort Controls**: Sort by name, status, or issue count
 - **Responsive Design**: Works on desktop, tablet, and mobile devices
 
 #### Visual Elements
+
 - **Status Indicators**: Color-coded icons for validation status
 - **Issue Categorization**: Group issues by type (assets, encoding, structure)
 - **Progress Bars**: Visual representation of library health
 - **Thumbnails**: Poster images when available
 
 #### Navigation
+
 - **Fixed Header**: Always visible controls while scrolling
 - **Jump to Top**: Quick navigation for long reports
 - **Collapsible Sections**: Expand/collapse detailed information
@@ -38,6 +41,7 @@ media-audit scan --roots "D:\Media" --problems-only --report issues.html
 ### Report Sections
 
 #### Summary Dashboard
+
 ```html
 <!-- Generated summary section -->
 <div class="summary-card">
@@ -64,12 +68,14 @@ media-audit scan --roots "D:\Media" --problems-only --report issues.html
 ```
 
 #### Movies Section
+
 - **Movie Cards**: Each movie displayed as a card with poster (if available)
 - **Issue Lists**: Detailed breakdown of each validation issue
 - **File Information**: Video codec, resolution, file size
 - **Asset Status**: Visual indicators for posters, backgrounds, trailers
 
 #### TV Shows Section
+
 - **Series Overview**: Series-level information and issues
 - **Season Breakdown**: Each season with its specific issues
 - **Episode Details**: Individual episode validation results
@@ -78,6 +84,7 @@ media-audit scan --roots "D:\Media" --problems-only --report issues.html
 ### Customization Options
 
 #### Report Configuration
+
 ```yaml
 # config.yaml
 report:
@@ -88,6 +95,7 @@ report:
 ```
 
 #### CSS Customization
+
 The HTML report includes embedded CSS that can be customized:
 
 ```html
@@ -118,6 +126,7 @@ media-audit scan --roots "D:\Media" --report audit.html --json audit.json
 ### JSON Structure
 
 #### Root Schema
+
 ```json
 {
   "scan_info": {
@@ -141,6 +150,7 @@ media-audit scan --roots "D:\Media" --report audit.html --json audit.json
 ```
 
 #### Movie Entry Schema
+
 ```json
 {
   "name": "The Matrix",
@@ -182,6 +192,7 @@ media-audit scan --roots "D:\Media" --report audit.html --json audit.json
 ```
 
 #### TV Series Schema
+
 ```json
 {
   "name": "Breaking Bad",
@@ -224,7 +235,7 @@ media-audit scan --roots "D:\Media" --report audit.html --json audit.json
   ],
   "issues": [
     {
-      "category": "assets", 
+      "category": "assets",
       "message": "Missing series banner (optional)",
       "severity": "warning",
       "details": {"expected": ["banner.jpg"]}
@@ -236,6 +247,7 @@ media-audit scan --roots "D:\Media" --report audit.html --json audit.json
 ### Data Analysis Examples
 
 #### Python Analysis
+
 ```python
 import json
 
@@ -243,22 +255,22 @@ def analyze_report(json_path):
     """Analyze JSON report data."""
     with open(json_path) as f:
         data = json.load(f)
-    
+
     # Basic statistics
     print(f"Total items: {data['scan_info']['total_items']}")
     print(f"Total issues: {data['scan_info']['total_issues']}")
-    
+
     # Issue breakdown
-    error_count = sum(1 for movie in data['movies'] 
-                     for issue in movie['issues'] 
+    error_count = sum(1 for movie in data['movies']
+                     for issue in movie['issues']
                      if issue['severity'] == 'error')
     print(f"Error count: {error_count}")
-    
+
     # Missing assets analysis
     missing_posters = [movie['name'] for movie in data['movies']
                       if not movie['assets']['posters']]
     print(f"Movies missing posters: {len(missing_posters)}")
-    
+
     # Codec analysis
     codecs = {}
     for movie in data['movies']:
@@ -272,6 +284,7 @@ analyze_report('audit.json')
 ```
 
 #### PowerShell Analysis
+
 ```powershell
 # Load and analyze JSON report
 $report = Get-Content audit.json | ConvertFrom-Json
@@ -282,8 +295,8 @@ Write-Host "TV Series: $($report.series.Count)"
 Write-Host "Total Issues: $($report.scan_info.total_issues)"
 
 # Find movies with H.264 codec
-$h264Movies = $report.movies | Where-Object { 
-    $_.video_info.codec -eq "h264" 
+$h264Movies = $report.movies | Where-Object {
+    $_.video_info.codec -eq "h264"
 } | Select-Object name, path
 
 Write-Host "Movies with H.264 codec:"
@@ -295,6 +308,7 @@ $problemItems | Export-Csv -Path "problem-movies.csv" -NoTypeInformation
 ```
 
 #### Bash/jq Analysis
+
 ```bash
 #!/bin/bash
 # Analyze JSON report using jq
@@ -328,16 +342,19 @@ echo "H.264 files saved to h264-files.txt"
 ### Status Indicators
 
 #### Valid Status
+
 - ✅ **Green**: All requirements met
 - No validation issues found
 - Assets present and codec approved
 
-#### Warning Status  
+#### Warning Status
+
 - ⚠️ **Yellow**: Minor issues that don't break functionality
 - Missing optional assets (trailers, banners, title cards)
 - Non-preferred but acceptable codecs
 
 #### Error Status
+
 - ❌ **Red**: Critical issues requiring attention
 - Missing required assets (posters, backgrounds)
 - No video files found
@@ -346,6 +363,7 @@ echo "H.264 files saved to h264-files.txt"
 ### Issue Categories
 
 #### Assets Issues
+
 - **Missing Poster**: No poster/folder image found
 - **Missing Background**: No fanart/backdrop image found
 - **Missing Trailer**: No trailer video found (warning)
@@ -353,11 +371,13 @@ echo "H.264 files saved to h264-files.txt"
 - **Missing Title Card**: No episode thumbnail found (warning)
 
 #### Encoding Issues
+
 - **Non-preferred Codec**: Video uses H.264 instead of HEVC/AV1
 - **Re-encoding Recommended**: Suggests modern codec for better compression
 - **Probe Failed**: Unable to analyze video file
 
 #### Structure Issues
+
 - **Invalid Directory Name**: Folder doesn't match expected pattern
 - **Missing Video File**: No video content found
 - **Unexpected Files**: Files that don't match any pattern
@@ -365,11 +385,13 @@ echo "H.264 files saved to h264-files.txt"
 ### Severity Levels
 
 #### Error Severity
+
 - **Impact**: Breaks media server functionality
 - **Examples**: Missing posters, no video files
 - **Action**: Must be fixed for proper operation
 
 #### Warning Severity
+
 - **Impact**: Reduces user experience quality
 - **Examples**: Missing trailers, H.264 codec
 - **Action**: Should be fixed when convenient
@@ -379,18 +401,20 @@ echo "H.264 files saved to h264-files.txt"
 ### Custom Filtering
 
 #### Configuration-Based Filtering
+
 ```yaml
 # config.yaml
 report:
   problems_only: true
   min_severity: warning  # Only show warnings and errors
-  exclude_categories: 
+  exclude_categories:
     - encoding          # Skip codec warnings
   include_categories:
     - assets           # Only show asset issues
 ```
 
 #### Runtime Filtering
+
 ```bash
 # Show only movies with issues
 media-audit scan --roots "D:\Movies" --problems-only --report movie-issues.html
@@ -406,15 +430,17 @@ media-audit scan \
 ### Report Comparison
 
 #### Generate Baseline
+
 ```bash
 # Create baseline report
 media-audit scan --roots "D:\Media" --json baseline.json
 
-# After fixes, create new report  
+# After fixes, create new report
 media-audit scan --roots "D:\Media" --json current.json
 ```
 
 #### Compare Reports
+
 ```python
 # compare-reports.py
 import json
@@ -425,18 +451,18 @@ def compare_reports(baseline_path, current_path):
         baseline = json.load(f)
     with open(current_path) as f:
         current = json.load(f)
-    
+
     baseline_issues = baseline['scan_info']['total_issues']
     current_issues = current['scan_info']['total_issues']
-    
+
     print(f"Baseline issues: {baseline_issues}")
     print(f"Current issues: {current_issues}")
     print(f"Improvement: {baseline_issues - current_issues} issues resolved")
-    
+
     # Detailed comparison
     baseline_movies = {m['name']: len(m['issues']) for m in baseline['movies']}
     current_movies = {m['name']: len(m['issues']) for m in current['movies']}
-    
+
     for movie, issues in baseline_movies.items():
         current_issues = current_movies.get(movie, 0)
         if issues > current_issues:
@@ -448,6 +474,7 @@ compare_reports('baseline.json', 'current.json')
 ### Integration with External Tools
 
 #### Media Server Integration
+
 ```python
 # plex-integration.py
 import json
@@ -457,7 +484,7 @@ def sync_with_plex(json_report, plex_url, plex_token):
     """Sync audit results with Plex."""
     with open(json_report) as f:
         data = json.load(f)
-    
+
     # Find items missing posters
     missing_posters = []
     for movie in data['movies']:
@@ -467,7 +494,7 @@ def sync_with_plex(json_report, plex_url, plex_token):
                 'path': movie['path'],
                 'year': movie.get('year')
             })
-    
+
     # Trigger Plex metadata refresh for these items
     for item in missing_posters:
         refresh_plex_metadata(item, plex_url, plex_token)
@@ -479,6 +506,7 @@ def refresh_plex_metadata(item, plex_url, token):
 ```
 
 #### Automation Scripts
+
 ```bash
 #!/bin/bash
 # automated-fix.sh - Fix common issues automatically

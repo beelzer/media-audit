@@ -76,6 +76,7 @@ Before starting work on significant changes:
 ### 2. Implementation
 
 1. **Create a Branch**: Use descriptive branch names
+
    ```bash
    git checkout -b feature/add-anime-parser
    git checkout -b fix/caching-race-condition
@@ -108,6 +109,7 @@ We follow [PEP 8](https://pep8.org/) with some project-specific conventions:
 - **Imports**: Organized using Ruff's import sorting
 
 Example:
+
 ```python
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -117,32 +119,32 @@ from media_audit.models import MovieItem, ValidationStatus
 
 class MovieParser:
     """Parser for movie directory structures."""
-    
+
     def __init__(self, patterns: CompiledPatterns, cache: Optional[MediaCache] = None):
         """Initialize movie parser.
-        
+
         Args:
             patterns: Compiled regex patterns for asset matching
             cache: Optional cache for performance optimization
         """
         self.patterns = patterns
         self.cache = cache
-    
+
     def parse(self, directory: Path) -> Optional[MovieItem]:
         """Parse movie directory and return MovieItem.
-        
+
         Args:
             directory: Path to movie directory
-            
+
         Returns:
             MovieItem if parsing successful, None otherwise
-            
+
         Raises:
             ValidationError: If directory structure is invalid
         """
         if not self._is_movie_directory(directory):
             return None
-        
+
         # Implementation...
 ```
 
@@ -184,20 +186,20 @@ Use Google-style docstrings for all public functions, classes, and modules:
 ```python
 def validate_movie(movie: MovieItem, config: ValidationConfig) -> List[ValidationIssue]:
     """Validate movie against configuration rules.
-    
+
     Performs comprehensive validation of movie assets, video quality,
     and structural requirements based on the provided configuration.
-    
+
     Args:
         movie: Movie item to validate
         config: Validation configuration with rules and thresholds
-        
+
     Returns:
         List of validation issues found, empty if movie is valid
-        
+
     Raises:
         ValidationError: If movie data is malformed or config is invalid
-        
+
     Example:
         >>> movie = MovieItem(name="Test Movie", path=Path("/movies/test"))
         >>> config = ValidationConfig(require_trailer=True)
@@ -227,13 +229,13 @@ def parse_movie_directory(directory: Path) -> Optional[MovieItem]:
         if not directory.exists():
             logger.warning(f"Directory does not exist: {directory}")
             return None
-            
+
         if not directory.is_dir():
             logger.error(f"Path is not a directory: {directory}")
             return None
-            
+
         return _parse_movie_contents(directory)
-        
+
     except PermissionError:
         logger.warning(f"Permission denied accessing directory: {directory}")
         return None
@@ -249,7 +251,7 @@ def parse_movie_directory(directory: Path) -> Optional[MovieItem]:
 
 #### File Organization
 
-```
+```text
 src/media_audit/
 ├── __init__.py          # Package initialization
 ├── cli.py              # Command-line interface
@@ -309,7 +311,7 @@ from media_audit.patterns import CompiledPatterns
 
 We use [Conventional Commits](https://www.conventionalcommits.org/) format:
 
-```
+```text
 <type>[optional scope]: <description>
 
 [optional body]
@@ -368,12 +370,14 @@ Closes #124"
 ### Before Creating a PR
 
 1. **Sync with Main**: Ensure your branch is up-to-date
+
    ```bash
    git fetch upstream
    git rebase upstream/main
    ```
 
 2. **Run All Checks**: Verify everything passes locally
+
    ```bash
    pytest                      # Run tests
    ruff check src tests       # Linting
@@ -540,6 +544,7 @@ We use [Semantic Versioning](https://semver.org/):
 - **PATCH**: Bug fixes (backward compatible)
 
 Examples:
+
 - `1.0.0` → `1.0.1` (patch: bug fix)
 - `1.0.1` → `1.1.0` (minor: new feature)
 - `1.1.0` → `2.0.0` (major: breaking change)
@@ -576,6 +581,7 @@ For maintainers preparing releases:
 ### Contributors
 
 All contributors are recognized in:
+
 - `CONTRIBUTORS.md` file
 - Release notes
 - Project documentation
@@ -598,6 +604,7 @@ All contributors are recognized in:
 ### Maintainer Responsibilities
 
 Maintainers are responsible for:
+
 - **Code Review**: Reviewing and approving changes
 - **Release Management**: Managing releases and versioning
 - **Community Management**: Fostering a welcoming community

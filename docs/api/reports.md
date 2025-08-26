@@ -14,7 +14,7 @@ from pathlib import Path
 
 class HTMLReportGenerator:
     """Generates interactive HTML reports."""
-    
+
     def __init__(self):
         """Initialize HTML report generator."""
 ```
@@ -27,9 +27,9 @@ Main method for generating HTML reports.
 
 ```python
 def generate(
-    self, 
-    scan_result: ScanResult, 
-    output_path: Path, 
+    self,
+    scan_result: ScanResult,
+    output_path: Path,
     problems_only: bool = False,
     show_thumbnails: bool = True
 ) -> None:
@@ -37,18 +37,21 @@ def generate(
 ```
 
 **Parameters**:
+
 - `scan_result`: Complete scan results to report on
 - `output_path`: Where to save the HTML file
 - `problems_only`: Show only items with validation issues
 - `show_thumbnails`: Include poster thumbnails in report
 
 **Process**:
+
 1. Filter results based on `problems_only` setting
 2. Generate HTML structure with embedded CSS and JavaScript
 3. Create interactive elements (search, filters, sorting)
 4. Write complete HTML file to output path
 
 **Usage Example**:
+
 ```python
 from media_audit.report import HTMLReportGenerator
 
@@ -84,21 +87,21 @@ The generated HTML follows this structure:
             <select id="sortSelect">...</select>
         </div>
     </header>
-    
+
     <main>
         <section class="summary">
             <!-- Scan statistics -->
         </section>
-        
+
         <section class="movies">
             <!-- Movie items -->
         </section>
-        
+
         <section class="series">
             <!-- TV series items -->
         </section>
     </main>
-    
+
     <script>/* Interactive JavaScript */</script>
 </body>
 </html>
@@ -107,16 +110,17 @@ The generated HTML follows this structure:
 #### Interactive Features
 
 ##### Search Functionality
+
 ```javascript
 // Search implementation (embedded in HTML)
 function filterItems(searchTerm) {
     const items = document.querySelectorAll('.media-item');
     const term = searchTerm.toLowerCase();
-    
+
     items.forEach(item => {
         const title = item.querySelector('.item-title').textContent.toLowerCase();
         const path = item.querySelector('.item-path').textContent.toLowerCase();
-        
+
         if (title.includes(term) || path.includes(term)) {
             item.style.display = 'block';
         } else {
@@ -127,10 +131,11 @@ function filterItems(searchTerm) {
 ```
 
 ##### Status Filtering
+
 ```javascript
 function filterByStatus(status) {
     const items = document.querySelectorAll('.media-item');
-    
+
     items.forEach(item => {
         if (status === 'all' || item.classList.contains(status)) {
             item.style.display = 'block';
@@ -142,18 +147,19 @@ function filterByStatus(status) {
 ```
 
 ##### Sorting Options
+
 ```javascript
 function sortItems(criteria) {
     const containers = [
         document.getElementById('movies-container'),
         document.getElementById('series-container')
     ];
-    
+
     containers.forEach(container => {
         if (!container) return;
-        
+
         const items = Array.from(container.querySelectorAll('.media-item'));
-        
+
         items.sort((a, b) => {
             switch (criteria) {
                 case 'name':
@@ -166,7 +172,7 @@ function sortItems(criteria) {
                     return 0;
             }
         });
-        
+
         // Re-append sorted items
         items.forEach(item => container.appendChild(item));
     });
@@ -182,7 +188,7 @@ from media_audit.report import JSONReportGenerator
 
 class JSONReportGenerator:
     """Generates structured JSON reports."""
-    
+
     def __init__(self):
         """Initialize JSON report generator."""
 ```
@@ -195,18 +201,20 @@ Main method for generating JSON reports.
 
 ```python
 def generate(
-    self, 
-    scan_result: ScanResult, 
+    self,
+    scan_result: ScanResult,
     output_path: Path
 ) -> None:
     """Generate JSON report from scan results."""
 ```
 
 **Parameters**:
+
 - `scan_result`: Complete scan results to serialize
 - `output_path`: Where to save the JSON file
 
 **Usage Example**:
+
 ```python
 from media_audit.report import JSONReportGenerator
 
@@ -372,34 +380,34 @@ The generated JSON follows this structure:
 ```python
 class CustomHTMLReportGenerator(HTMLReportGenerator):
     """Custom HTML report generator with templates."""
-    
+
     def __init__(self, template_dir: Path = None):
         super().__init__()
         self.template_dir = template_dir or Path("templates")
-    
+
     def generate(self, scan_result: ScanResult, output_path: Path, **kwargs) -> None:
         """Generate report using custom templates."""
-        
+
         # Load custom templates
         header_template = self.load_template("header.html")
         movie_template = self.load_template("movie_item.html")
         series_template = self.load_template("series_item.html")
         footer_template = self.load_template("footer.html")
-        
+
         # Generate report sections
         html_content = self.build_html_with_templates(
-            scan_result, 
+            scan_result,
             header_template,
             movie_template,
             series_template,
             footer_template,
             **kwargs
         )
-        
+
         # Write to file
         with open(output_path, 'w', encoding='utf-8') as f:
             f.write(html_content)
-    
+
     def load_template(self, template_name: str) -> str:
         """Load HTML template from file."""
         template_path = self.template_dir / template_name
@@ -408,7 +416,7 @@ class CustomHTMLReportGenerator(HTMLReportGenerator):
         else:
             # Return default template
             return self.get_default_template(template_name)
-    
+
     def build_html_with_templates(self, scan_result: ScanResult, *templates, **kwargs) -> str:
         """Build HTML using templates."""
         # Template rendering logic here
@@ -424,11 +432,11 @@ custom_generator.generate(scan_results, Path("custom_report.html"))
 ```python
 class ThemedReportGenerator(HTMLReportGenerator):
     """Report generator with theme support."""
-    
+
     THEMES = {
         "dark": {
             "background": "#1a1a1a",
-            "text": "#ffffff", 
+            "text": "#ffffff",
             "accent": "#4CAF50",
             "error": "#f44336",
             "warning": "#ff9800"
@@ -436,7 +444,7 @@ class ThemedReportGenerator(HTMLReportGenerator):
         "light": {
             "background": "#ffffff",
             "text": "#333333",
-            "accent": "#2196F3", 
+            "accent": "#2196F3",
             "error": "#d32f2f",
             "warning": "#f57c00"
         },
@@ -448,11 +456,11 @@ class ThemedReportGenerator(HTMLReportGenerator):
             "warning": "#ffb74d"
         }
     }
-    
+
     def __init__(self, theme: str = "light"):
         super().__init__()
         self.theme = self.THEMES.get(theme, self.THEMES["light"])
-    
+
     def generate_css(self) -> str:
         """Generate themed CSS."""
         css_template = """
@@ -460,24 +468,24 @@ class ThemedReportGenerator(HTMLReportGenerator):
             background-color: {background};
             color: {text};
         }
-        
+
         .header {
             background-color: {accent};
         }
-        
+
         .error {
             color: {error};
         }
-        
+
         .warning {
             color: {warning};
         }
-        
+
         .accent {
             color: {accent};
         }
         """
-        
+
         return css_template.format(**self.theme)
 
 # Usage
@@ -492,7 +500,7 @@ dark_generator.generate(scan_results, Path("dark_theme_report.html"))
 ```python
 def generate_detailed_statistics(scan_result: ScanResult) -> dict:
     """Generate comprehensive statistics for reports."""
-    
+
     stats = {
         "overview": {
             "total_items": scan_result.total_items,
@@ -508,7 +516,7 @@ def generate_detailed_statistics(scan_result: ScanResult) -> dict:
         },
         "by_status": {
             "valid": 0,
-            "warning": 0, 
+            "warning": 0,
             "error": 0
         },
         "by_category": {
@@ -526,47 +534,47 @@ def generate_detailed_statistics(scan_result: ScanResult) -> dict:
             "average_episode_size_gb": 0
         }
     }
-    
+
     # Calculate statistics
     all_items = []
     all_items.extend(scan_result.movies)
     all_items.extend(scan_result.series)
-    
+
     for series in scan_result.series:
         all_items.extend(series.seasons)
         for season in series.seasons:
             all_items.extend(season.episodes)
-    
+
     # Status counts
     for item in all_items:
         stats["by_status"][item.status.value] += 1
-        
+
         # Issue categories
         for issue in item.issues:
             if issue.category in stats["by_category"]:
                 stats["by_category"][issue.category] += 1
-    
+
     # Video statistics
     total_size = 0
     movie_sizes = []
     episode_sizes = []
-    
+
     for movie in scan_result.movies:
         if movie.video_info:
             # Codec distribution
             codec = movie.video_info.codec.value if movie.video_info.codec else "unknown"
             stats["codecs"][codec] = stats["codecs"].get(codec, 0) + 1
-            
+
             # Resolution distribution
             if movie.video_info.resolution:
                 res_str = f"{movie.video_info.resolution[0]}x{movie.video_info.resolution[1]}"
                 stats["resolutions"][res_str] = stats["resolutions"].get(res_str, 0) + 1
-            
+
             # File sizes
             if movie.video_info.size:
                 total_size += movie.video_info.size
                 movie_sizes.append(movie.video_info.size)
-    
+
     # Similar for episodes
     for series in scan_result.series:
         for season in series.seasons:
@@ -574,15 +582,15 @@ def generate_detailed_statistics(scan_result: ScanResult) -> dict:
                 if episode.video_info:
                     codec = episode.video_info.codec.value if episode.video_info.codec else "unknown"
                     stats["codecs"][codec] = stats["codecs"].get(codec, 0) + 1
-                    
+
                     if episode.video_info.resolution:
                         res_str = f"{episode.video_info.resolution[0]}x{episode.video_info.resolution[1]}"
                         stats["resolutions"][res_str] = stats["resolutions"].get(res_str, 0) + 1
-                    
+
                     if episode.video_info.size:
                         total_size += episode.video_info.size
                         episode_sizes.append(episode.video_info.size)
-    
+
     # File size statistics
     stats["file_sizes"]["total_size_gb"] = round(total_size / (1024**3), 2)
     if movie_sizes:
@@ -593,7 +601,7 @@ def generate_detailed_statistics(scan_result: ScanResult) -> dict:
         stats["file_sizes"]["average_episode_size_gb"] = round(
             sum(episode_sizes) / len(episode_sizes) / (1024**3), 2
         )
-    
+
     return stats
 ```
 
@@ -602,7 +610,7 @@ def generate_detailed_statistics(scan_result: ScanResult) -> dict:
 ```python
 class ComparisonReportGenerator:
     """Generate comparison reports between scans."""
-    
+
     def generate_comparison_report(
         self,
         baseline_result: ScanResult,
@@ -610,9 +618,9 @@ class ComparisonReportGenerator:
         output_path: Path
     ) -> None:
         """Generate comparison report between two scan results."""
-        
+
         comparison = self.compare_results(baseline_result, current_result)
-        
+
         html_content = f"""
         <!DOCTYPE html>
         <html>
@@ -622,7 +630,7 @@ class ComparisonReportGenerator:
         </head>
         <body>
             <h1>Media Audit Comparison Report</h1>
-            
+
             <section class="summary">
                 <h2>Comparison Summary</h2>
                 <div class="comparison-stats">
@@ -635,7 +643,7 @@ class ComparisonReportGenerator:
                             <span class="change {comparison['issues_trend']}">{comparison['issues_change']:+d}</span>
                         </div>
                     </div>
-                    
+
                     <div class="stat-group">
                         <h3>Total Items</h3>
                         <div class="comparison">
@@ -647,50 +655,50 @@ class ComparisonReportGenerator:
                     </div>
                 </div>
             </section>
-            
+
             <section class="improvements">
                 <h2>Improvements</h2>
                 <ul>
                     {''.join(f'<li>{improvement}</li>' for improvement in comparison['improvements'])}
                 </ul>
             </section>
-            
+
             <section class="new-issues">
                 <h2>New Issues</h2>
                 <ul>
                     {''.join(f'<li>{issue}</li>' for issue in comparison['new_issues'])}
                 </ul>
             </section>
-            
+
             <script>{self.get_comparison_js()}</script>
         </body>
         </html>
         """
-        
+
         with open(output_path, 'w', encoding='utf-8') as f:
             f.write(html_content)
-    
+
     def compare_results(self, baseline: ScanResult, current: ScanResult) -> dict:
         """Compare two scan results."""
-        
+
         # Create item lookup by path
         baseline_items = {item.path: item for item in self.get_all_items(baseline)}
         current_items = {item.path: item for item in self.get_all_items(current)}
-        
+
         improvements = []
         new_issues = []
-        
+
         # Find improvements
         for path, baseline_item in baseline_items.items():
             current_item = current_items.get(path)
             if current_item:
                 baseline_issue_count = len(baseline_item.issues)
                 current_issue_count = len(current_item.issues)
-                
+
                 if current_issue_count < baseline_issue_count:
                     improvement = f"{baseline_item.name}: {baseline_issue_count - current_issue_count} issues resolved"
                     improvements.append(improvement)
-        
+
         # Find new issues
         for path, current_item in current_items.items():
             baseline_item = baseline_items.get(path)
@@ -699,10 +707,10 @@ class ComparisonReportGenerator:
                 for issue in current_item.issues:
                     if issue.message not in baseline_issues:
                         new_issues.append(f"{current_item.name}: {issue.message}")
-        
+
         issues_change = current.total_issues - baseline.total_issues
         items_change = current.total_items - baseline.total_items
-        
+
         return {
             "issues_change": issues_change,
             "items_change": items_change,
@@ -710,18 +718,18 @@ class ComparisonReportGenerator:
             "improvements": improvements,
             "new_issues": new_issues
         }
-    
+
     def get_all_items(self, scan_result: ScanResult) -> list:
         """Get all items from scan result."""
         items = []
         items.extend(scan_result.movies)
         items.extend(scan_result.series)
-        
+
         for series in scan_result.series:
             items.extend(series.seasons)
             for season in series.seasons:
                 items.extend(season.episodes)
-        
+
         return items
 
 # Usage
@@ -743,12 +751,12 @@ from typing import Dict, Any
 
 class CSVReportGenerator:
     """Generate CSV reports for data analysis."""
-    
+
     def generate_csv_report(self, scan_result: ScanResult, output_path: Path) -> None:
         """Generate CSV report of all items and issues."""
-        
+
         rows = []
-        
+
         # Process movies
         for movie in scan_result.movies:
             base_row = {
@@ -762,7 +770,7 @@ class CSVReportGenerator:
                 "has_background": bool(movie.assets.backgrounds),
                 "has_trailer": bool(movie.assets.trailers),
             }
-            
+
             if movie.video_info:
                 base_row.update({
                     "codec": movie.video_info.codec.value if movie.video_info.codec else None,
@@ -771,7 +779,7 @@ class CSVReportGenerator:
                     "size_gb": round(movie.video_info.size / (1024**3), 2) if movie.video_info.size else None,
                     "bitrate_mbps": round(movie.video_info.bitrate / 1_000_000, 1) if movie.video_info.bitrate else None,
                 })
-            
+
             # Add each issue as separate row
             if movie.issues:
                 for issue in movie.issues:
@@ -784,7 +792,7 @@ class CSVReportGenerator:
                     rows.append(issue_row)
             else:
                 rows.append(base_row)
-        
+
         # Process TV series (similar structure)
         for series in scan_result.series:
             for season in series.seasons:
@@ -800,7 +808,7 @@ class CSVReportGenerator:
                         "issue_count": len(episode.issues),
                         "has_title_card": bool(episode.assets.title_cards),
                     }
-                    
+
                     if episode.video_info:
                         base_row.update({
                             "codec": episode.video_info.codec.value if episode.video_info.codec else None,
@@ -808,7 +816,7 @@ class CSVReportGenerator:
                             "duration_minutes": round(episode.video_info.duration / 60, 1) if episode.video_info.duration else None,
                             "size_gb": round(episode.video_info.size / (1024**3), 2) if episode.video_info.size else None,
                         })
-                    
+
                     if episode.issues:
                         for issue in episode.issues:
                             issue_row = base_row.copy()
@@ -820,7 +828,7 @@ class CSVReportGenerator:
                             rows.append(issue_row)
                     else:
                         rows.append(base_row)
-        
+
         # Write CSV
         if rows:
             fieldnames = rows[0].keys()
@@ -842,39 +850,39 @@ from xml.dom import minidom
 
 class XMLReportGenerator:
     """Generate XML reports for structured data exchange."""
-    
+
     def generate_xml_report(self, scan_result: ScanResult, output_path: Path) -> None:
         """Generate XML report."""
-        
+
         # Create root element
         root = ET.Element("media_audit_report")
         root.set("version", "1.0")
         root.set("scan_time", scan_result.scan_time.isoformat())
         root.set("duration", str(scan_result.duration))
-        
+
         # Scan info
         scan_info = ET.SubElement(root, "scan_info")
         ET.SubElement(scan_info, "total_items").text = str(scan_result.total_items)
         ET.SubElement(scan_info, "total_issues").text = str(scan_result.total_issues)
-        
+
         # Root paths
         root_paths = ET.SubElement(scan_info, "root_paths")
         for path in scan_result.root_paths:
             ET.SubElement(root_paths, "path").text = str(path)
-        
+
         # Movies section
         movies = ET.SubElement(root, "movies")
         movies.set("count", str(len(scan_result.movies)))
-        
+
         for movie in scan_result.movies:
             movie_elem = ET.SubElement(movies, "movie")
             movie_elem.set("status", movie.status.value)
-            
+
             ET.SubElement(movie_elem, "name").text = movie.name
             ET.SubElement(movie_elem, "path").text = str(movie.path)
             if movie.year:
                 ET.SubElement(movie_elem, "year").text = str(movie.year)
-            
+
             # Assets
             assets = ET.SubElement(movie_elem, "assets")
             for asset_type in ["posters", "backgrounds", "trailers"]:
@@ -883,7 +891,7 @@ class XMLReportGenerator:
                     asset_elem = ET.SubElement(assets, asset_type)
                     for asset_path in asset_list:
                         ET.SubElement(asset_elem, "file").text = str(asset_path)
-            
+
             # Video info
             if movie.video_info:
                 video = ET.SubElement(movie_elem, "video_info")
@@ -897,27 +905,27 @@ class XMLReportGenerator:
                     ET.SubElement(video, "duration").text = str(movie.video_info.duration)
                 if movie.video_info.size:
                     ET.SubElement(video, "size").text = str(movie.video_info.size)
-            
+
             # Issues
             if movie.issues:
                 issues = ET.SubElement(movie_elem, "issues")
                 issues.set("count", str(len(movie.issues)))
-                
+
                 for issue in movie.issues:
                     issue_elem = ET.SubElement(issues, "issue")
                     issue_elem.set("severity", issue.severity.value)
                     issue_elem.set("category", issue.category)
                     ET.SubElement(issue_elem, "message").text = issue.message
-        
+
         # TV series section (similar structure)
         series_elem = ET.SubElement(root, "series")
         series_elem.set("count", str(len(scan_result.series)))
         # ... (implement similar to movies)
-        
+
         # Format and write XML
         xml_string = ET.tostring(root, encoding='unicode')
         pretty_xml = minidom.parseString(xml_string).toprettyxml(indent="  ")
-        
+
         with open(output_path, 'w', encoding='utf-8') as f:
             f.write(pretty_xml)
 
@@ -936,16 +944,16 @@ import json
 
 class SlackReportGenerator:
     """Generate Slack notifications from scan results."""
-    
+
     def __init__(self, webhook_url: str):
         self.webhook_url = webhook_url
-    
+
     def send_summary_notification(self, scan_result: ScanResult) -> None:
         """Send summary notification to Slack."""
-        
+
         # Prepare message
         color = "good" if scan_result.total_issues == 0 else "warning" if scan_result.total_issues < 10 else "danger"
-        
+
         attachment = {
             "color": color,
             "title": "Media Audit Completed",
@@ -979,7 +987,7 @@ class SlackReportGenerator:
             "footer": "Media Audit",
             "ts": int(scan_result.scan_time.timestamp())
         }
-        
+
         if scan_result.total_issues > 0:
             # Add sample issues
             sample_issues = self.get_sample_issues(scan_result, limit=3)
@@ -989,33 +997,33 @@ class SlackReportGenerator:
                     "value": "\n".join(f"• {issue}" for issue in sample_issues),
                     "short": False
                 })
-        
+
         payload = {
             "text": "Media Library Scan Results",
             "attachments": [attachment]
         }
-        
+
         # Send to Slack
         response = requests.post(self.webhook_url, json=payload)
         response.raise_for_status()
-    
+
     def get_sample_issues(self, scan_result: ScanResult, limit: int = 5) -> list[str]:
         """Get sample issues for notification."""
         issues = []
-        
+
         for movie in scan_result.movies:
             if movie.issues:
                 issues.append(f"{movie.name}: {movie.issues[0].message}")
                 if len(issues) >= limit:
                     break
-        
+
         if len(issues) < limit:
             for series in scan_result.series:
                 if series.issues:
                     issues.append(f"{series.name}: {series.issues[0].message}")
                     if len(issues) >= limit:
                         break
-        
+
         return issues
 
 # Usage
@@ -1034,13 +1042,13 @@ from email import encoders
 
 class EmailReportGenerator:
     """Generate and send email reports."""
-    
+
     def __init__(self, smtp_server: str, smtp_port: int, username: str, password: str):
         self.smtp_server = smtp_server
         self.smtp_port = smtp_port
         self.username = username
         self.password = password
-    
+
     def send_report_email(
         self,
         scan_result: ScanResult,
@@ -1049,40 +1057,40 @@ class EmailReportGenerator:
         json_report_path: Path = None
     ) -> None:
         """Send email with scan results and optional attachments."""
-        
+
         # Create message
         msg = MIMEMultipart()
         msg['From'] = self.username
         msg['To'] = ', '.join(recipients)
         msg['Subject'] = f"Media Audit Report - {scan_result.total_issues} Issues Found"
-        
+
         # Email body
         body = self.generate_email_body(scan_result)
         msg.attach(MIMEText(body, 'html'))
-        
+
         # Attach reports
         if html_report_path and html_report_path.exists():
             self.attach_file(msg, html_report_path)
-        
+
         if json_report_path and json_report_path.exists():
             self.attach_file(msg, json_report_path)
-        
+
         # Send email
         with smtplib.SMTP(self.smtp_server, self.smtp_port) as server:
             server.starttls()
             server.login(self.username, self.password)
             server.send_message(msg)
-    
+
     def generate_email_body(self, scan_result: ScanResult) -> str:
         """Generate HTML email body."""
-        
+
         status_color = "#4CAF50" if scan_result.total_issues == 0 else "#FF9800" if scan_result.total_issues < 10 else "#F44336"
-        
+
         html = f"""
         <html>
         <body style="font-family: Arial, sans-serif;">
             <h2 style="color: #333;">Media Audit Report</h2>
-            
+
             <div style="background-color: #f5f5f5; padding: 20px; border-radius: 5px; margin: 20px 0;">
                 <h3>Scan Summary</h3>
                 <table style="border-collapse: collapse; width: 100%;">
@@ -1107,14 +1115,14 @@ class EmailReportGenerator:
                 </table>
             </div>
         """
-        
+
         if scan_result.total_issues > 0:
             html += """
             <div style="margin: 20px 0;">
                 <h3>Top Issues</h3>
                 <ul>
             """
-            
+
             # Add top issues
             issue_count = 0
             for movie in scan_result.movies:
@@ -1124,39 +1132,39 @@ class EmailReportGenerator:
                     color = "#F44336" if issue.severity.value == "error" else "#FF9800"
                     html += f"""
                     <li>
-                        <strong style="color: {color};">{movie.name}:</strong> 
+                        <strong style="color: {color};">{movie.name}:</strong>
                         {issue.message}
                     </li>
                     """
                     issue_count += 1
                 if issue_count >= 10:
                     break
-            
+
             html += "</ul></div>"
-        
+
         html += """
             <p style="color: #666; font-size: 12px; margin-top: 30px;">
-                This report was generated automatically by Media Audit. 
+                This report was generated automatically by Media Audit.
                 See attached files for complete details.
             </p>
         </body>
         </html>
         """
-        
+
         return html
-    
+
     def attach_file(self, msg: MIMEMultipart, file_path: Path) -> None:
         """Attach file to email message."""
         with open(file_path, "rb") as attachment:
             part = MIMEBase('application', 'octet-stream')
             part.set_payload(attachment.read())
-        
+
         encoders.encode_base64(part)
         part.add_header(
             'Content-Disposition',
             f'attachment; filename= {file_path.name}'
         )
-        
+
         msg.attach(part)
 
 # Usage

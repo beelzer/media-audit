@@ -12,7 +12,7 @@ graph LR
         A[Configuration] --> B[CLI Arguments]
         C[File System] --> D[Media Directories]
     end
-    
+
     subgraph "Processing Phase"
         E[Directory Discovery] --> F[Content Parsing]
         F --> G[Asset Discovery]
@@ -20,13 +20,13 @@ graph LR
         G --> I[Data Validation]
         H --> I
     end
-    
+
     subgraph "Output Phase"
         I --> J[Report Generation]
         J --> K[HTML Report]
         J --> L[JSON Report]
     end
-    
+
     B --> E
     D --> E
     A --> I
@@ -37,12 +37,14 @@ graph LR
 ### 1. Configuration Phase
 
 **Input Sources**:
+
 - YAML configuration files
 - Command-line arguments
 - Environment variables
 - Built-in defaults
 
 **Data Transformation**:
+
 ```python
 # Raw configuration data
 config_data = {
@@ -60,6 +62,7 @@ config = Config.from_dict(config_data)
 ```
 
 **Processing Steps**:
+
 1. **Load Configuration**: Read from file or use defaults
 2. **Environment Expansion**: Replace `${VAR}` with environment values
 3. **Type Conversion**: Convert strings to appropriate types (Path, Enum, etc.)
@@ -75,11 +78,12 @@ config = Config.from_dict(config_data)
 **Input**: List of root paths from configuration
 
 **Data Transformation**:
+
 ```python
 # Input: Configuration root paths
 root_paths = [Path("/media"), Path("/backup")]
 
-# Output: Categorized directory lists  
+# Output: Categorized directory lists
 discovered_directories = {
     "movies": [Path("/media/Movies/Movie1"), Path("/media/Movies/Movie2")],
     "tv_shows": [Path("/media/TV/Series1"), Path("/media/TV/Series2")],
@@ -88,6 +92,7 @@ discovered_directories = {
 ```
 
 **Processing Steps**:
+
 1. **Path Validation**: Verify paths exist and are accessible
 2. **Structure Detection**: Look for standard directory layouts
 3. **Content Classification**: Categorize as Movies/, TV Shows/, or mixed
@@ -95,6 +100,7 @@ discovered_directories = {
 5. **Permission Checking**: Ensure directories are readable
 
 **Flow Diagram**:
+
 ```mermaid
 graph TD
     A[Root Path] --> B{Exists & Readable?}
@@ -102,13 +108,13 @@ graph TD
     B -->|Yes| D{Has Movies/ Dir?}
     D -->|Yes| E[Scan Movies Directory]
     D -->|No| F{Has TV/ Dir?}
-    F -->|Yes| G[Scan TV Directory] 
+    F -->|Yes| G[Scan TV Directory]
     F -->|No| H[Scan as Mixed Content]
-    
+
     E --> I[List Movie Directories]
     G --> J[List Series Directories]
     H --> K[Auto-detect Content Type]
-    
+
     I --> L[Movies List]
     J --> M[TV Shows List]
     K --> N[Mixed Content List]
@@ -121,6 +127,7 @@ graph TD
 **Input**: Directory paths categorized by content type
 
 **Data Transformation**:
+
 ```python
 # Input: Directory path
 directory = Path("/media/Movies/The Matrix (1999)")
@@ -147,54 +154,56 @@ movie = MovieItem(
 **Processing Steps**:
 
 #### Movie Parsing Flow
+
 ```mermaid
 sequenceDiagram
     participant P as Parser
     participant C as Cache
     participant F as FileSystem
     participant M as Metadata Extractor
-    
+
     P->>C: check_cache(directory)
     alt Cache Hit
         C-->>P: cached_movie_data
-    else Cache Miss  
+    else Cache Miss
         P->>F: list_directory_contents()
         F-->>P: files_and_directories
-        
+
         P->>M: extract_metadata(directory_name)
         M-->>P: movie_metadata
-        
+
         P->>P: find_assets(files)
         P->>P: find_video_files(files)
         P->>P: create_movie_item()
-        
+
         P->>C: store_cache(directory, movie_data)
     end
 ```
 
 #### TV Show Parsing Flow
+
 ```mermaid
 graph TD
     A[TV Series Directory] --> B[Extract Series Metadata]
     B --> C[Find Series Assets]
     C --> D[Discover Season Directories]
     D --> E{For Each Season}
-    
+
     E --> F[Extract Season Number]
-    F --> G[Find Season Assets]  
+    F --> G[Find Season Assets]
     G --> H[Discover Episode Files]
     H --> I{For Each Episode}
-    
+
     I --> J[Parse Episode Name]
     J --> K[Extract S/E Numbers]
     K --> L[Find Episode Assets]
     L --> M[Create Episode Item]
-    
+
     M --> N[Add to Season]
     N --> O{More Episodes?}
     O -->|Yes| I
     O -->|No| P[Create Season Item]
-    
+
     P --> Q[Add to Series]
     Q --> R{More Seasons?}
     R -->|Yes| E
@@ -202,15 +211,16 @@ graph TD
 ```
 
 **Metadata Extraction**:
+
 ```python
 def extract_movie_info(directory_name: str) -> dict:
     """Extract metadata from directory name."""
     # Input: "The Matrix (1999) 1080p BluRay x264-GROUP"
-    
+
     patterns = [
         r'^(.+?)\s*\((\d{4})\)\s*(.*?)(?:\s+(\w+(?:-\w+)*))?\s*$'
     ]
-    
+
     for pattern in patterns:
         match = re.match(pattern, directory_name)
         if match:
@@ -220,7 +230,7 @@ def extract_movie_info(directory_name: str) -> dict:
                 "quality_source": match.group(3),
                 "release_group": match.group(4)
             }
-    
+
     # Output: Structured metadata dictionary
 ```
 
@@ -231,11 +241,12 @@ def extract_movie_info(directory_name: str) -> dict:
 **Input**: Directory contents and compiled patterns
 
 **Data Transformation**:
+
 ```python
 # Input: Files in directory
 files = [
     Path("poster.jpg"),
-    Path("fanart.jpg"), 
+    Path("fanart.jpg"),
     Path("banner.png"),
     Path("movie.mkv"),
     Path("trailer.mp4")
@@ -252,45 +263,47 @@ assets = MediaAssets(
 ```
 
 **Pattern Matching Process**:
+
 ```python
 def find_assets(self, directory: Path) -> MediaAssets:
     """Asset discovery with pattern matching."""
     assets = MediaAssets()
-    
+
     for file_path in directory.iterdir():
         if not file_path.is_file():
             continue
-            
+
         filename = file_path.name.lower()
-        
+
         # Priority-based matching (first match wins)
         matched = False
-        
+
         # Check poster patterns
         for pattern in self.patterns.poster_re:
             if pattern.search(filename):
                 assets.posters.append(file_path)
                 matched = True
                 break
-        
+
         if matched:
             continue
-            
+
         # Check background patterns
         for pattern in self.patterns.background_re:
             if pattern.search(filename):
                 assets.backgrounds.append(file_path)
                 matched = True
                 break
-        
+
         # Continue for other asset types...
-    
+
     return assets
 ```
 
 **Pattern Priority Order**:
+
 1. **Posters**: `poster.jpg` → `folder.jpg` → `movie.jpg` → numbered variants
-2. **Backgrounds**: `fanart.jpg` → `backdrop.jpg` → `background.jpg` → numbered variants  
+2. **Backgrounds**: `fanart.jpg` → `backdrop.jpg` → `background.jpg` → numbered variants
 3. **Banners**: `banner.jpg` → numbered variants
 4. **Trailers**: Files with "trailer" in name → `Trailers/` directory contents
 5. **Title Cards**: Episode-matching patterns (`S01E01.jpg`)
@@ -302,6 +315,7 @@ def find_assets(self, directory: Path) -> MediaAssets:
 **Input**: Video file paths from parsed media items
 
 **Data Transformation**:
+
 ```python
 # Input: Video file path
 video_path = Path("/media/Movies/Movie/movie.mkv")
@@ -322,13 +336,14 @@ video_info = VideoInfo(
 ```
 
 **FFprobe Integration Flow**:
+
 ```mermaid
 sequenceDiagram
     participant V as Validator
     participant C as Cache
     participant P as FFprobe
     participant F as File System
-    
+
     V->>C: get_probe_data(video_file)
     alt Cache Hit & Valid
         C-->>V: cached_video_info
@@ -336,43 +351,44 @@ sequenceDiagram
         V->>P: probe_video(video_file)
         P->>F: execute_ffprobe_command()
         F-->>P: ffprobe_json_output
-        
+
         P->>P: parse_json_output()
         P->>P: extract_codec()
-        P->>P: extract_resolution()  
+        P->>P: extract_resolution()
         P->>P: extract_duration()
         P->>P: extract_bitrate()
-        
+
         P-->>V: video_info
         V->>C: store_probe_data(video_file, video_info)
     end
 ```
 
 **Data Extraction Process**:
+
 ```python
 def probe_video(file_path: Path) -> VideoInfo:
     """Extract video information using FFprobe."""
-    
+
     # 1. Execute FFprobe
-    cmd = ['ffprobe', '-v', 'quiet', '-print_format', 'json', 
+    cmd = ['ffprobe', '-v', 'quiet', '-print_format', 'json',
            '-show_format', '-show_streams', str(file_path)]
-    
+
     result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
     ffprobe_data = json.loads(result.stdout)
-    
+
     # 2. Extract video stream information
     video_streams = [s for s in ffprobe_data['streams'] if s.get('codec_type') == 'video']
     primary_stream = video_streams[0] if video_streams else {}
-    
+
     # 3. Map codec names
     codec_name = primary_stream.get('codec_name', '').lower()
     codec = CODEC_MAPPING.get(codec_name, CodecType.OTHER)
-    
+
     # 4. Extract other properties
     resolution = None
     if 'width' in primary_stream and 'height' in primary_stream:
         resolution = (int(primary_stream['width']), int(primary_stream['height']))
-    
+
     # 5. Create VideoInfo object
     return VideoInfo(
         path=file_path,
@@ -392,6 +408,7 @@ def probe_video(file_path: Path) -> VideoInfo:
 **Input**: Parsed media items with asset and video information
 
 **Data Transformation**:
+
 ```python
 # Input: Media item with parsed data
 movie = MovieItem(
@@ -404,7 +421,7 @@ movie = MovieItem(
 movie.issues = [
     ValidationIssue(
         category="assets",
-        message="Missing poster image", 
+        message="Missing poster image",
         severity=ValidationStatus.ERROR,
         details={"expected": ["poster.jpg", "folder.jpg"]}
     ),
@@ -418,6 +435,7 @@ movie.issues = [
 ```
 
 **Validation Rule Application**:
+
 ```mermaid
 graph TD
     A[Media Item] --> B{Item Type?}
@@ -425,21 +443,21 @@ graph TD
     B -->|Series| D[Series Validation Rules]
     B -->|Season| E[Season Validation Rules]
     B -->|Episode| F[Episode Validation Rules]
-    
+
     C --> G[Check Required Assets]
     C --> H[Check Video Standards]
     G --> I{Assets Present?}
     H --> J{Codec Allowed?}
-    
+
     I -->|No| K[Add Asset Issue]
     I -->|Yes| L[Continue]
     J -->|No| M[Add Codec Issue]
     J -->|Yes| L
-    
+
     K --> N[Update Item Status]
     M --> N
     L --> N
-    
+
     D --> O[Validate Series Assets]
     D --> P[Validate Child Seasons]
     P --> E
@@ -448,10 +466,11 @@ graph TD
 ```
 
 **Issue Generation Logic**:
+
 ```python
 def validate_movie(self, movie: MovieItem) -> None:
     """Apply validation rules to movie."""
-    
+
     # Asset validation
     if not movie.assets.posters:
         movie.issues.append(ValidationIssue(
@@ -460,15 +479,15 @@ def validate_movie(self, movie: MovieItem) -> None:
             severity=ValidationStatus.ERROR,
             details={"expected": ["poster.jpg", "folder.jpg", "movie.jpg"]}
         ))
-    
+
     if not movie.assets.backgrounds:
         movie.issues.append(ValidationIssue(
-            category="assets", 
+            category="assets",
             message="Missing background/fanart image",
             severity=ValidationStatus.ERROR,
             details={"expected": ["fanart.jpg", "background.jpg", "backdrop.jpg"]}
         ))
-    
+
     # Video validation
     if movie.video_info and movie.video_info.codec:
         if movie.video_info.codec not in self.allowed_codecs:
@@ -491,6 +510,7 @@ def validate_movie(self, movie: MovieItem) -> None:
 **Input**: Individual validated media items
 
 **Data Transformation**:
+
 ```python
 # Input: Individual items
 movies = [movie1, movie2, movie3]
@@ -510,35 +530,37 @@ scan_result = ScanResult(
 ```
 
 **Statistics Calculation**:
+
 ```python
 def update_stats(self) -> None:
     """Calculate comprehensive statistics."""
-    
+
     # Basic counts
     self.total_items = len(self.movies) + len(self.series)
-    
+
     # Issue counting (hierarchical for TV shows)
     self.total_issues = 0
-    
+
     # Movie issues
     self.total_issues += sum(len(movie.issues) for movie in self.movies)
-    
+
     # TV show issues (series → seasons → episodes)
     for series in self.series:
         self.total_issues += len(series.issues)
-        
+
         for season in series.seasons:
             self.total_issues += len(season.issues)
-            
+
             for episode in season.episodes:
                 self.total_issues += len(episode.issues)
 ```
 
 **Data Enrichment**:
+
 ```python
 def enrich_scan_result(scan_result: ScanResult) -> dict:
     """Add calculated statistics and metadata."""
-    
+
     return {
         "basic_stats": {
             "total_items": scan_result.total_items,
@@ -570,11 +592,12 @@ def enrich_scan_result(scan_result: ScanResult) -> dict:
 **Data Transformation**:
 
 #### HTML Report Generation
+
 ```python
 # Input: Scan result object
 scan_result = ScanResult(...)
 
-# Output: Interactive HTML document  
+# Output: Interactive HTML document
 html_content = f"""
 <!DOCTYPE html>
 <html>
@@ -598,7 +621,8 @@ html_content = f"""
 """
 ```
 
-#### JSON Report Generation  
+#### JSON Report Generation
+
 ```python
 # Input: Scan result object
 scan_result = ScanResult(...)
@@ -619,28 +643,29 @@ json_data = {
 ```
 
 **Report Generation Flow**:
+
 ```mermaid
 graph TD
     A[Scan Result] --> B{Report Type?}
     B -->|HTML| C[HTML Generator]
     B -->|JSON| D[JSON Generator]
-    
+
     C --> E[Generate Header]
     C --> F[Generate Summary]
     C --> G[Generate Movie Items]
     C --> H[Generate Series Items]
     C --> I[Generate JavaScript]
-    
+
     E --> J[Combine HTML]
     F --> J
     G --> J
     H --> J
     I --> J
-    
+
     D --> K[Serialize Models]
     K --> L[Add Statistics]
     L --> M[Format JSON]
-    
+
     J --> N[Write HTML File]
     M --> O[Write JSON File]
 ```
@@ -666,10 +691,10 @@ sequenceDiagram
     participant C as Cache
     participant D as Disk
     participant M as Memory
-    
+
     P->>C: get_media_item(directory)
     C->>M: check_memory_cache()
-    
+
     alt Memory Hit
         M-->>C: cached_data
         C-->>P: deserialized_item
@@ -694,24 +719,24 @@ sequenceDiagram
 ```python
 def validate_cache_entry(entry: CacheEntry, file_path: Path) -> bool:
     """Validate cache entry is still current."""
-    
+
     # 1. Check file existence
     if not file_path.exists():
         return False
-    
-    # 2. Check schema compatibility  
+
+    # 2. Check schema compatibility
     if entry.schema_version != current_schema_version:
         return False
-    
+
     # 3. Check file modification time
     stat = file_path.stat()
     if stat.st_mtime > entry.file_mtime:
         return False
-    
+
     # 4. Check file size
     if stat.st_size != entry.file_size:
         return False
-    
+
     return True
 ```
 
@@ -727,19 +752,19 @@ graph TD
     B -->|Permission| C[Skip File, Log Warning]
     B -->|Not Found| D[Skip File, Log Info]
     B -->|Corrupt| E[Skip File, Log Error]
-    
+
     F[FFprobe Error] --> G{Error Type?}
     G -->|Timeout| H[Log Warning, Continue]
     G -->|Not Found| I[Disable Video Analysis]
     G -->|Parse Error| J[Log Error, Skip Video]
-    
+
     C --> K[Continue Processing]
     D --> K
     E --> K
     H --> K
     I --> K
     J --> K
-    
+
     K --> L[Collect in Scan Result]
 ```
 
@@ -751,7 +776,7 @@ class ScanError:
     """Represents an error during scanning."""
     error_type: str         # "permission", "file_not_found", "parse_error"
     path: Path             # File or directory that caused error
-    message: str           # Human-readable description  
+    message: str           # Human-readable description
     timestamp: datetime    # When error occurred
     exception: Exception | None  # Original exception if available
 ```
@@ -783,16 +808,16 @@ def safe_parse_movie(directory: Path) -> MovieItem | None:
 ```python
 def process_directories_concurrently(directories: list[Path]) -> list[MediaItem]:
     """Process multiple directories concurrently."""
-    
+
     results = []
-    
+
     with ThreadPoolExecutor(max_workers=self.config.concurrent_workers) as executor:
         # Submit all tasks
         future_to_dir = {
             executor.submit(self.parse_directory, directory): directory
             for directory in directories
         }
-        
+
         # Collect results as they complete
         for future in as_completed(future_to_dir):
             try:
@@ -802,7 +827,7 @@ def process_directories_concurrently(directories: list[Path]) -> list[MediaItem]
             except Exception as e:
                 directory = future_to_dir[future]
                 logger.error(f"Failed to process {directory}: {e}")
-    
+
     return results
 ```
 
@@ -811,16 +836,16 @@ def process_directories_concurrently(directories: list[Path]) -> list[MediaItem]
 ```python
 def scan_large_library(root_paths: list[Path]) -> Iterator[MediaItem]:
     """Memory-efficient scanning for large libraries."""
-    
+
     for root_path in root_paths:
         # Process in batches to limit memory usage
         for batch in self.get_directory_batches(root_path, batch_size=100):
             # Process batch
             batch_results = self.process_batch(batch)
-            
+
             # Yield results immediately
             yield from batch_results
-            
+
             # Clean up batch data
             del batch_results
             gc.collect()
@@ -831,11 +856,11 @@ def scan_large_library(root_paths: list[Path]) -> Iterator[MediaItem]:
 ```python
 def generate_streaming_json_report(scan_result: ScanResult, output_path: Path) -> None:
     """Generate JSON report without loading everything into memory."""
-    
+
     with open(output_path, 'w') as f:
         f.write('{"scan_info": ')
         json.dump(serialize_scan_info(scan_result), f)
-        
+
         f.write(', "movies": [')
         first = True
         for movie in scan_result.movies:
@@ -843,10 +868,10 @@ def generate_streaming_json_report(scan_result: ScanResult, output_path: Path) -
                 f.write(',')
             json.dump(serialize_movie(movie), f)
             first = False
-        
+
         f.write('], "series": [')
         # Similar for series...
-        
+
         f.write(']}')
 ```
 
@@ -857,13 +882,13 @@ def generate_streaming_json_report(scan_result: ScanResult, output_path: Path) -
 ```python
 def validate_configuration_data(data: dict) -> Config:
     """Validate and sanitize configuration data."""
-    
+
     # 1. Schema validation
     schema_validator = ConfigSchema()
     errors = schema_validator.validate(data)
     if errors:
         raise ValidationError(f"Configuration errors: {errors}")
-    
+
     # 2. Path validation
     for path_str in data.get('scan', {}).get('root_paths', []):
         path = Path(path_str).resolve()
@@ -871,7 +896,7 @@ def validate_configuration_data(data: dict) -> Config:
             logger.warning(f"Root path does not exist: {path}")
         if not os.access(path, os.R_OK):
             raise ValidationError(f"Root path not readable: {path}")
-    
+
     # 3. Type conversion and validation
     return Config.from_dict(data)
 ```
@@ -881,25 +906,25 @@ def validate_configuration_data(data: dict) -> Config:
 ```python
 def verify_scan_result_integrity(scan_result: ScanResult) -> bool:
     """Verify scan result data integrity."""
-    
+
     # Check basic constraints
     if scan_result.total_items != len(scan_result.movies) + len(scan_result.series):
         logger.error("Total items count mismatch")
         return False
-    
+
     # Check hierarchical consistency
     for series in scan_result.series:
         calculated_episodes = sum(len(season.episodes) for season in series.seasons)
         if series.total_episodes != calculated_episodes:
             logger.error(f"Episode count mismatch in {series.name}")
             return False
-    
+
     # Check issue counts
     actual_issues = count_all_issues(scan_result)
     if scan_result.total_issues != actual_issues:
         logger.error("Total issues count mismatch")
         return False
-    
+
     return True
 ```
 

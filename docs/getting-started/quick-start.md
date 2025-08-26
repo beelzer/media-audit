@@ -11,6 +11,7 @@ media-audit scan /path/to/media
 ```
 
 This will:
+
 - Scan all media files recursively
 - Extract metadata using FFprobe
 - Generate an HTML report (`media-audit-report.html`)
@@ -50,9 +51,9 @@ media-audit scan /media --no-probe
 
 ## Using Configuration Files
 
-For complex setups, use a configuration file:
+For complex setups, use a configuration file.
 
-1. Create `config.yaml`:
+**Step 1:** Create `config.yaml`:
 
 ```yaml
 # Paths to scan
@@ -64,7 +65,7 @@ paths:
 output:
   path: ./reports/media-audit.html
   format: html
-  
+
 # File extensions to include
 extensions:
   - .mkv
@@ -76,14 +77,14 @@ validation:
   check_duplicates: true
   check_quality: true
   min_quality: 720p
-  
+
 # Performance
 cache:
   enabled: true
   ttl: 604800  # 1 week
 ```
 
-2. Run with config:
+**Step 2:** Run with config:
 
 ```bash
 media-audit scan --config config.yaml
@@ -98,6 +99,7 @@ media-audit scan --interactive
 ```
 
 This will prompt you for:
+
 - Directory to scan
 - File types to include
 - Validation options
@@ -135,7 +137,7 @@ Add to crontab:
 
 ### Terminal Output
 
-```
+```text
 🎬 Media Audit v0.1.0
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -151,7 +153,7 @@ Scan Duration:     3m 42s
 ✅ Validation Results
 ──────────────────────────────────────
 ✓ 325 files passed
-⚠ 12 files have warnings  
+⚠ 12 files have warnings
 ✗ 5 files have errors
 
 Top Issues:

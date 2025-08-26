@@ -373,13 +373,15 @@ jobs:
 
       - name: Add deployment summary
         run: |
-          echo "### 🚀 GitHub Pages Deployment" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **Status**: ✅ Deployed successfully" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **URL**: ${{ steps.deployment.outputs.page_url }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **Time**: $(date -u +"%Y-%m-%d %H:%M:%S UTC")" >> "$GITHUB_STEP_SUMMARY"
-          echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "📖 Visit the [documentation](${{ steps.deployment.outputs.page_url }}) to see the changes." >> "$GITHUB_STEP_SUMMARY"
+          {
+            echo "### 🚀 GitHub Pages Deployment"
+            echo ""
+            echo "- **Status**: ✅ Deployed successfully"
+            echo "- **URL**: ${{ steps.deployment.outputs.page_url }}"
+            echo "- **Time**: $(date -u +"%Y-%m-%d %H:%M:%S UTC")"
+            echo ""
+            echo "📖 Visit the [documentation](${{ steps.deployment.outputs.page_url }}) to see the changes."
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Comment on PR after deployment
         if: github.event_name == 'pull_request'

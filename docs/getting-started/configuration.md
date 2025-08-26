@@ -107,7 +107,7 @@ media-audit scan [OPTIONS] [PATHS]...
 | Option | Description | Default |
 |--------|-------------|---------|
 | `--output`, `-o` | Output file path | `media-audit-report.html` |
-| `--format`, `-f` | Output format (html/json) | `html` |
+| `--format`, `-f` | Output format (HTML/JSON) | `html` |
 | `--config`, `-c` | Configuration file path | None |
 | `--verbose`, `-v` | Enable verbose output | False |
 | `--quiet`, `-q` | Suppress all output | False |
@@ -252,12 +252,12 @@ validation:
       condition: "quality == '2160p'"
       requirement: "video_codec == 'hevc'"
       severity: error
-      
+
     - name: "HD Content Preferred Codecs"
       condition: "quality >= '1080p'"
       requirement: "video_codec in ['h264', 'hevc']"
       severity: warning
-      
+
     - name: "Minimum Bitrate for 4K"
       condition: "quality == '2160p'"
       requirement: "video_bitrate >= 15000000"
@@ -357,7 +357,7 @@ cache:
 Set workers based on your system:
 
 - **SSD**: 4-8 workers
-- **HDD**: 2-4 workers  
+- **HDD**: 2-4 workers
 - **Network**: 1-2 workers
 
 ### 4. Use Appropriate Timeouts

@@ -51,8 +51,9 @@ media-audit scan --roots "D:\Media" --profiles all
 ```
 
 Available profiles:
+
 - `plex` - Plex Media Server patterns
-- `jellyfin` - Jellyfin patterns  
+- `jellyfin` - Jellyfin patterns
 - `emby` - Emby patterns
 - `all` - Combined patterns from all servers
 
@@ -67,6 +68,7 @@ media-audit scan --roots "D:\Movies" --allow-codecs hevc h265 av1
 ```
 
 Supported codecs:
+
 - `hevc` / `h265` - High Efficiency Video Codec
 - `av1` - AOMedia Video 1
 - `h264` - H.264/AVC (flagged for re-encoding)
@@ -102,7 +104,7 @@ media-audit scan --roots "D:\Media" \
 
 Media Audit expects movies to follow this structure:
 
-```
+```text
 Movies/
 ├── The Matrix (1999)/
 │   ├── The Matrix (1999).mkv          # Main video file
@@ -118,6 +120,7 @@ Movies/
 ```
 
 **Key Requirements:**
+
 - Movie folder format: `Title (Year)/`
 - Video file should match folder name
 - At least one poster file (poster.jpg, folder.jpg, movie.jpg, etc.)
@@ -128,7 +131,7 @@ Movies/
 
 TV shows require more complex structure:
 
-```
+```text
 TV Shows/
 └── Breaking Bad/
     ├── poster.jpg                     # Series poster
@@ -149,6 +152,7 @@ TV Shows/
 ```
 
 **Key Requirements:**
+
 - Series-level: poster, background (banner optional)
 - Season posters: `SeasonXX.jpg` format
 - Episode naming: `S01E01.mkv` format
@@ -273,6 +277,7 @@ fi
 ### Common Issues
 
 #### FFprobe Not Found
+
 ```bash
 # Install ffmpeg on Ubuntu/Debian
 sudo apt install ffmpeg
@@ -285,6 +290,7 @@ choco install ffmpeg
 ```
 
 #### Permission Errors
+
 ```bash
 # Run with appropriate permissions
 sudo media-audit scan --roots "/media"
@@ -294,6 +300,7 @@ chmod -R 755 /path/to/media
 ```
 
 #### Large Library Performance
+
 ```bash
 # Increase workers for better performance
 media-audit scan --roots "D:\Media" --workers 8
@@ -337,17 +344,17 @@ jobs:
       - uses: actions/setup-python@v4
         with:
           python-version: '3.13'
-      
+
       - name: Install media-audit
         run: pip install media-audit
-      
+
       - name: Validate media library
         run: |
           media-audit scan \
             --roots "/media" \
             --json validation-results.json \
             --report validation-report.html
-      
+
       - name: Upload reports
         uses: actions/upload-artifact@v4
         if: always()
@@ -378,7 +385,7 @@ def validate_media(path):
         '--roots', path,
         '--json', 'results.json'
     ], capture_output=True, text=True)
-    
+
     if result.returncode in [0, 1]:  # Success or issues found
         with open('results.json') as f:
             return json.load(f)

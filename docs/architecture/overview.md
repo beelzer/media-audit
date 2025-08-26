@@ -12,26 +12,26 @@ graph TB
         CLI[CLI Interface]
         Config[Configuration System]
     end
-    
+
     subgraph "Core Processing Layer"
         Scanner[Media Scanner]
         Parser[Content Parsers]
         Validator[Validation Engine]
         Probe[FFprobe Integration]
     end
-    
+
     subgraph "Data Layer"
         Models[Data Models]
         Cache[Caching System]
         Patterns[Pattern Matching]
     end
-    
+
     subgraph "Output Layer"
         HTMLGen[HTML Report Generator]
         JSONGen[JSON Report Generator]
         FileSystem[File System]
     end
-    
+
     CLI --> Scanner
     Config --> Scanner
     Scanner --> Parser
@@ -53,6 +53,7 @@ graph TB
 ### 1. User Interface Layer
 
 #### CLI Interface (`cli.py`)
+
 - **Purpose**: Primary user interaction point
 - **Responsibilities**:
   - Command-line argument parsing
@@ -65,6 +66,7 @@ graph TB
   - Exit code management for automation
 
 #### Configuration System (`config.py`)
+
 - **Purpose**: Centralized configuration management
 - **Responsibilities**:
   - YAML configuration file loading
@@ -79,6 +81,7 @@ graph TB
 ### 2. Core Processing Layer
 
 #### Media Scanner (`scanner/scanner.py`)
+
 - **Purpose**: Orchestrates the entire scanning process
 - **Responsibilities**:
   - Directory discovery and traversal
@@ -92,6 +95,7 @@ graph TB
   - Cache integration
 
 #### Content Parsers (`parsers/`)
+
 - **Purpose**: Extract structured information from media directories
 - **Components**:
   - `BaseParser`: Abstract foundation class
@@ -104,6 +108,7 @@ graph TB
   - Video file identification
 
 #### Validation Engine (`validator.py`)
+
 - **Purpose**: Apply quality rules and generate validation issues
 - **Responsibilities**:
   - Asset requirement validation
@@ -116,6 +121,7 @@ graph TB
   - Performance optimization through caching
 
 #### FFprobe Integration (`probe/`)
+
 - **Purpose**: Video file analysis using FFmpeg's FFprobe
 - **Responsibilities**:
   - Video codec detection
@@ -130,6 +136,7 @@ graph TB
 ### 3. Data Layer
 
 #### Data Models (`models.py`)
+
 - **Purpose**: Structured representation of media library data
 - **Core Models**:
   - `MediaItem`: Base class for all media content
@@ -145,6 +152,7 @@ graph TB
   - Serialization support
 
 #### Caching System (`cache.py`)
+
 - **Purpose**: Performance optimization through intelligent caching
 - **Cache Types**:
   - **FFprobe Cache**: Video analysis results (binary pickle)
@@ -157,6 +165,7 @@ graph TB
   - Performance statistics
 
 #### Pattern Matching (`patterns.py`)
+
 - **Purpose**: Media server-specific file pattern recognition
 - **Supported Servers**:
   - Plex Media Server
@@ -177,12 +186,13 @@ graph TB
 ### 4. Output Layer
 
 #### Report Generators (`report/`)
+
 - **HTML Generator** (`html.py`):
   - Interactive HTML reports with embedded CSS/JavaScript
   - Search, filter, and sort functionality
   - Responsive design for multiple screen sizes
   - Thumbnail support with Base64 encoding
-  
+
 - **JSON Generator** (`json.py`):
   - Machine-readable structured data
   - Complete scan results serialization
@@ -194,6 +204,7 @@ graph TB
 ### 1. Modularity and Separation of Concerns
 
 Each component has a single, well-defined responsibility:
+
 - **Parsers** only parse and extract data
 - **Validators** only validate and generate issues
 - **Scanners** only orchestrate the process
@@ -202,6 +213,7 @@ Each component has a single, well-defined responsibility:
 ### 2. Extensibility
 
 The architecture supports extension at multiple levels:
+
 - **Custom Parsers**: Inherit from `BaseParser` for new media types
 - **Custom Validators**: Extend `MediaValidator` for additional rules
 - **Custom Reports**: Implement new output formats
@@ -210,6 +222,7 @@ The architecture supports extension at multiple levels:
 ### 3. Performance Optimization
 
 Multiple strategies ensure good performance:
+
 - **Concurrent Processing**: Multi-threaded file processing
 - **Intelligent Caching**: Multiple cache layers with validation
 - **Memory Efficiency**: Streaming processing for large libraries
@@ -218,6 +231,7 @@ Multiple strategies ensure good performance:
 ### 4. Error Resilience
 
 The system gracefully handles various failure scenarios:
+
 - **Individual File Failures**: Continue processing remaining files
 - **Missing Dependencies**: Degrade gracefully when FFprobe unavailable
 - **Permission Issues**: Skip inaccessible files with warnings
@@ -226,6 +240,7 @@ The system gracefully handles various failure scenarios:
 ### 5. Configuration-Driven Behavior
 
 Most behavior is configurable without code changes:
+
 - **Media Server Profiles**: Select appropriate patterns
 - **Validation Rules**: Configure required assets and codecs
 - **Performance Settings**: Adjust worker counts and caching
@@ -244,10 +259,10 @@ sequenceDiagram
     participant Cache
     participant Probe
     participant Reporter
-    
+
     CLI->>Scanner: scan(config)
     Scanner->>Scanner: discover_directories()
-    
+
     loop For each media directory
         Scanner->>Parser: parse(directory)
         Parser->>Cache: check_cache(directory)
@@ -260,13 +275,13 @@ sequenceDiagram
             Parser->>Cache: store_data(directory, data)
         end
         Parser-->>Scanner: media_item
-        
+
         Scanner->>Validator: validate(media_item)
         Validator->>Cache: check_video_cache(file)
         Validator->>Validator: apply_rules(media_item)
         Validator-->>Scanner: updated_media_item
     end
-    
+
     Scanner-->>CLI: scan_result
     CLI->>Reporter: generate_report(scan_result)
     Reporter-->>CLI: report_files
@@ -280,32 +295,32 @@ graph TD
     B -->|Movies Directory| C[Movie Discovery]
     B -->|TV Shows Directory| D[TV Show Discovery]
     B -->|Mixed Content| E[Auto-detection]
-    
+
     C --> F[Parse Movie Directory]
     F --> G[Find Assets]
     F --> H[Find Video Files]
     F --> I[Extract Metadata]
-    
+
     D --> J[Parse Series Directory]
     J --> K[Find Series Assets]
     J --> L[Discover Seasons]
     L --> M[Parse Season Directory]
     M --> N[Discover Episodes]
     N --> O[Parse Episode Files]
-    
+
     E --> P{Directory Analysis}
     P -->|Has Season Folders| D
     P -->|Has Video Files| C
-    
+
     G --> Q[Create MediaItem]
     H --> Q
     I --> Q
     K --> R[Create SeriesItem]
     O --> R
-    
+
     Q --> S[Validate Item]
     R --> T[Validate Hierarchy]
-    
+
     S --> U[Collect Results]
     T --> U
 ```
@@ -317,25 +332,25 @@ graph LR
     subgraph "Memory Cache"
         MC[In-Session Cache]
     end
-    
+
     subgraph "Disk Cache"
         PC[Probe Cache<br/>*.pkl files]
         SC[Scan Cache<br/>*.json files]
     end
-    
+
     subgraph "Cache Management"
         CV[Cache Validation]
         CI[Cache Invalidation]
         CS[Schema Management]
     end
-    
+
     MC --> PC
     MC --> SC
     PC --> CV
     SC --> CV
     CV --> CI
     CS --> CI
-    
+
     CV -.->|File mtime check| FileSystem[File System]
     CI -.->|Schema change| CS
 ```
@@ -364,7 +379,7 @@ for issue in movie.issues:
 # 1. Parser level - parsed media items
 cached_movie = cache.get_media_item(directory, "movie")
 
-# 2. Probe level - video analysis results  
+# 2. Probe level - video analysis results
 cached_probe = cache.get_probe_data(video_file)
 
 # 3. Validator level - uses both caches
@@ -393,13 +408,15 @@ validator = MediaValidator(config.scan, cache)
 ### Horizontal Scaling
 
 The architecture supports horizontal scaling through:
+
 - **Process-based parallelism**: Multiple process workers
 - **Distributed caching**: Shared cache systems (Redis, etc.)
 - **Stateless design**: Components don't maintain global state
 
-### Vertical Scaling  
+### Vertical Scaling
 
 Performance scales with resources through:
+
 - **Configurable worker threads**: Adjust based on CPU cores
 - **Memory-efficient processing**: Stream large datasets
 - **Intelligent caching**: Reduce redundant work
@@ -407,6 +424,7 @@ Performance scales with resources through:
 ### Large Library Support
 
 Special considerations for large libraries:
+
 - **Batch processing**: Process items in configurable batches
 - **Progress persistence**: Resume interrupted scans
 - **Incremental updates**: Only process changed items
@@ -475,10 +493,10 @@ class CustomReportGenerator:
 class MediaAuditPlugin:
     def register_parsers(self) -> dict[str, type[BaseParser]]:
         pass
-    
+
     def register_validators(self) -> dict[str, type[MediaValidator]]:
         pass
-    
+
     def register_reporters(self) -> dict[str, type[ReportGenerator]]:
         pass
 ```
@@ -514,6 +532,7 @@ class MediaAuditPlugin:
 ### Microservices Architecture
 
 Potential split into microservices:
+
 - **Scanning Service**: Directory traversal and parsing
 - **Validation Service**: Rule engine and validation
 - **Analysis Service**: Video probing and metadata extraction
@@ -522,6 +541,7 @@ Potential split into microservices:
 ### Event-Driven Architecture
 
 Potential event-driven improvements:
+
 - **Scan Events**: Real-time progress updates
 - **Validation Events**: Immediate issue notifications
 - **File System Events**: Watch for changes and incremental updates
@@ -529,6 +549,7 @@ Potential event-driven improvements:
 ### API Integration
 
 RESTful API for programmatic access:
+
 - **Scan Endpoints**: Trigger scans via HTTP
 - **Status Endpoints**: Query scan progress and results
 - **Configuration Endpoints**: Manage configuration remotely
