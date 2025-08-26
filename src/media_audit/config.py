@@ -28,7 +28,7 @@ class ScanConfig:
     cache_enabled: bool = True
     cache_dir: Path | None = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Initialize patterns if not provided."""
         if self.patterns is None:
             self.patterns = get_patterns(self.profiles)
@@ -62,7 +62,7 @@ class Config:
     @classmethod
     def from_file(cls, path: Path) -> Config:
         """Load configuration from YAML file."""
-        with open(path, "r") as f:
+        with open(path) as f:
             data = yaml.safe_load(f) or {}
 
         return cls.from_dict(data)
@@ -87,6 +87,12 @@ class Config:
         if "patterns" in scan_data:
             pattern_data = scan_data["patterns"]
             scan_data["patterns"] = MediaPatterns(**pattern_data)
+
+        # Convert report paths to Path objects
+        if "output_path" in report_data:
+            report_data["output_path"] = Path(report_data["output_path"])
+        if "json_path" in report_data:
+            report_data["json_path"] = Path(report_data["json_path"])
 
         scan_config = ScanConfig(**scan_data)
         report_config = ReportConfig(**report_data)
@@ -113,17 +119,17 @@ class Config:
         }
 
         if self.scan.cache_dir:
-            data["scan"]["cache_dir"] = str(self.scan.cache_dir)
+            data["scan"]["cache_dir"] = str(self.scan.cache_dir)  # type: ignore[index]
 
         if self.report.output_path:
-            data["report"]["output_path"] = str(self.report.output_path)
+            data["report"]["output_path"] = str(self.report.output_path)  # type: ignore[index]
 
         if self.report.json_path:
-            data["report"]["json_path"] = str(self.report.json_path)
+            data["report"]["json_path"] = str(self.report.json_path)  # type: ignore[index]
 
         return data
 
-    def save(self, path: Path):
+    def save(self, path: Path) -> None:
         """Save configuration to YAML file."""
         with open(path, "w") as f:
             yaml.safe_dump(self.to_dict(), f, default_flow_style=False, sort_keys=False)

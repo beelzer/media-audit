@@ -49,7 +49,6 @@ report:
 
   # Only show items with problems in report
   problems_only: false
-
 # Custom pattern definitions (optional)
 # Uncomment to override default patterns
 # patterns:

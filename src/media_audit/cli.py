@@ -5,18 +5,15 @@ from __future__ import annotations
 import sys
 import webbrowser
 from pathlib import Path
-from typing import Optional
 
 import click
-from rich.console import Console
-from rich.table import Table
-from rich import print as rprint
+from rich.console import Console  # type: ignore[import-not-found]
+from rich.table import Table  # type: ignore[import-not-found]
 
-from .config import Config, ScanConfig, ReportConfig
-from .scanner import MediaScanner
+from .config import Config, ReportConfig, ScanConfig
+from .models import ScanResult, ValidationStatus
 from .report import HTMLReportGenerator, JSONReportGenerator
-from .models import ValidationStatus
-
+from .scanner import MediaScanner
 
 console = Console()
 
@@ -24,7 +21,7 @@ console = Console()
 @click.group(invoke_without_command=True)
 @click.pass_context
 @click.version_option()
-def cli(ctx):
+def cli(ctx: click.Context) -> None:
     """Media Audit - Scan and validate your media library."""
     if ctx.invoked_subcommand is None:
         ctx.invoke(scan)
@@ -59,6 +56,7 @@ def cli(ctx):
 @click.option(
     "--open",
     "-O",
+    "auto_open",
     is_flag=True,
     help="Open HTML report in browser after generation",
 )
@@ -110,7 +108,7 @@ def scan(
     profiles: tuple[str],
     report: Path | None,
     json: Path | None,
-    open: bool,
+    auto_open: bool,
     allow_codecs: tuple[str],
     include: tuple[str],
     exclude: tuple[str],
@@ -119,21 +117,20 @@ def scan(
     workers: int,
     no_cache: bool,
     problems_only: bool,
-):
+) -> None:
     """Scan media libraries and generate reports."""
-    
+
     # Load configuration
-    if config:
-        cfg = Config.from_file(config)
-    else:
-        cfg = Config()
+    cfg = Config.from_file(config) if config else Config()
 
     # Override with command-line options
     if roots:
         cfg.scan.root_paths = [Path(r) for r in roots]
-    
+
     if not cfg.scan.root_paths:
-        console.print("[red]Error:[/red] No root paths specified. Use --roots or provide a config file.")
+        console.print(
+            "[red]Error:[/red] No root paths specified. Use --roots or provide a config file."
+        )
         sys.exit(1)
 
     if profiles and profiles != ("all",):
@@ -141,6 +138,7 @@ def scan(
 
     if allow_codecs:
         from .models import CodecType
+
         cfg.scan.allowed_codecs = []
         for codec in allow_codecs:
             try:
@@ -166,8 +164,8 @@ def scan(
     if json:
         cfg.report.json_path = json
 
-    if open:
-        cfg.report.auto_open = open
+    if auto_open:
+        cfg.report.auto_open = auto_open
 
     if problems_only:
         cfg.report.problems_only = problems_only
@@ -175,13 +173,15 @@ def scan(
     # Load custom patterns if provided
     if patterns:
         import yaml
+
         with open(patterns) as f:
             pattern_data = yaml.safe_load(f)
             from .patterns import MediaPatterns
+
             cfg.scan.patterns = MediaPatterns(**pattern_data)
 
     # Start scanning
-    console.print(f"\n[bold cyan]📺 Media Audit Scanner[/bold cyan]\n")
+    console.print("\n[bold cyan]📺 Media Audit Scanner[/bold cyan]\n")
     console.print(f"[dim]Scanning {len(cfg.scan.root_paths)} root path(s)...[/dim]\n")
 
     scanner = MediaScanner(cfg.scan)
@@ -195,9 +195,10 @@ def scan(
         console.print(f"\n[cyan]Generating HTML report:[/cyan] {cfg.report.output_path}")
         html_gen = HTMLReportGenerator()
         html_gen.generate(result, cfg.report.output_path, cfg.report.problems_only)
-        
+
         if cfg.report.auto_open:
-            webbrowser.open(cfg.report.output_path.as_uri())
+            report_path = cfg.report.output_path.resolve()
+            webbrowser.open(str(report_path.as_uri()))
 
     if cfg.report.json_path:
         console.print(f"[cyan]Generating JSON report:[/cyan] {cfg.report.json_path}")
@@ -211,7 +212,7 @@ def scan(
 
 @cli.command()
 @click.argument("output", type=click.Path(path_type=Path))
-def init_config(output: Path):
+def init_config(output: Path) -> None:
     """Generate a sample configuration file."""
     sample_config = Config(
         scan=ScanConfig(
@@ -234,22 +235,22 @@ def init_config(output: Path):
     console.print("\n[dim]Edit this file to customize your scan settings.[/dim]")
 
 
-def _display_summary(result):
+def _display_summary(result: ScanResult) -> None:
     """Display scan results summary."""
     # Create summary table
     table = Table(title="Scan Summary", show_header=True, header_style="bold cyan")
     table.add_column("Category", style="dim")
     table.add_column("Count", justify="right")
-    
+
     table.add_row("Total Items", str(result.total_items))
     table.add_row("Movies", str(len(result.movies)))
     table.add_row("TV Series", str(len(result.series)))
     table.add_row("Total Issues", str(result.total_issues))
-    
+
     # Count by severity
     error_count = 0
     warning_count = 0
-    
+
     for movie in result.movies:
         for issue in movie.issues:
             if issue.severity == ValidationStatus.ERROR:
@@ -263,14 +264,14 @@ def _display_summary(result):
                 error_count += 1
             elif issue.severity == ValidationStatus.WARNING:
                 warning_count += 1
-        
+
         for season in series.seasons:
             for issue in season.issues:
                 if issue.severity == ValidationStatus.ERROR:
                     error_count += 1
                 elif issue.severity == ValidationStatus.WARNING:
                     warning_count += 1
-            
+
             for episode in season.episodes:
                 for issue in episode.issues:
                     if issue.severity == ValidationStatus.ERROR:
@@ -281,13 +282,13 @@ def _display_summary(result):
     table.add_row("[red]Errors[/red]", f"[red]{error_count}[/red]")
     table.add_row("[yellow]Warnings[/yellow]", f"[yellow]{warning_count}[/yellow]")
     table.add_row("Scan Duration", f"{result.duration:.2f}s")
-    
+
     console.print(table)
 
     # Show sample issues
     if result.total_issues > 0:
         console.print("\n[bold]Sample Issues Found:[/bold]")
-        
+
         items_with_issues = result.get_items_with_issues()[:5]  # Show first 5
         for item in items_with_issues:
             console.print(f"\n[cyan]{item.name}[/cyan] ({item.path})")
@@ -299,7 +300,7 @@ def _display_summary(result):
             console.print(f"\n[dim]... and {result.total_issues - 5} more issues[/dim]")
 
 
-def main():
+def main() -> None:
     """Main entry point."""
     cli()
 

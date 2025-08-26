@@ -1,12 +1,10 @@
 """Tests for pattern matching."""
 
-import pytest
-
 from media_audit.patterns import (
-    MediaPatterns,
-    PLEX_PATTERNS,
-    JELLYFIN_PATTERNS,
     EMBY_PATTERNS,
+    JELLYFIN_PATTERNS,
+    PLEX_PATTERNS,
+    MediaPatterns,
     get_patterns,
 )
 
@@ -36,7 +34,7 @@ def test_emby_patterns():
 def test_get_patterns_default():
     """Test getting default (combined) patterns."""
     patterns = get_patterns()
-    
+
     # Should have patterns from all presets
     assert len(patterns.poster_patterns) > 0
     assert len(patterns.background_patterns) > 0
@@ -45,7 +43,7 @@ def test_get_patterns_default():
 def test_get_patterns_specific():
     """Test getting specific profile patterns."""
     patterns = get_patterns(["plex"])
-    
+
     # Should only have Plex patterns
     assert "^poster\\." in patterns.poster_patterns
     assert "^folder\\." in patterns.poster_patterns
@@ -54,7 +52,7 @@ def test_get_patterns_specific():
 def test_get_patterns_multiple():
     """Test getting multiple profile patterns."""
     patterns = get_patterns(["plex", "jellyfin"])
-    
+
     # Should have patterns from both
     assert "^poster\\." in patterns.poster_patterns
     assert "^backdrop\\." in patterns.background_patterns
@@ -66,12 +64,12 @@ def test_pattern_compilation():
         poster_patterns=[r"^poster\."],
         background_patterns=[r"^fanart\."],
     )
-    
+
     compiled = patterns.compile_patterns()
-    
+
     assert len(compiled.poster_re) == 1
     assert len(compiled.background_re) == 1
-    
+
     # Test regex matching
     assert compiled.poster_re[0].match("poster.jpg")
     assert not compiled.poster_re[0].match("movie.jpg")

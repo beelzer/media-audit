@@ -5,21 +5,25 @@ from __future__ import annotations
 import json
 import shutil
 import subprocess
-from pathlib import Path
-from typing import Any
 from functools import lru_cache
+from pathlib import Path
+from typing import TYPE_CHECKING, Any
 
-from ..models import CodecType, VideoInfo
+from media_audit.models import CodecType, VideoInfo
+
+if TYPE_CHECKING:
+    from media_audit.cache import MediaCache
 
 
 class FFProbe:
     """FFprobe wrapper for video analysis."""
 
-    def __init__(self, ffprobe_path: str | None = None):
+    def __init__(self, ffprobe_path: str | None = None, cache: MediaCache | None = None):
         """Initialize FFProbe."""
-        self.ffprobe_path = ffprobe_path or self._find_ffprobe()
+        self.ffprobe_path: str = ffprobe_path or self._find_ffprobe() or ""
         if not self.ffprobe_path:
             raise RuntimeError("ffprobe not found. Please install ffmpeg.")
+        self.cache = cache
 
     @staticmethod
     def _find_ffprobe() -> str | None:
@@ -28,25 +32,42 @@ class FFProbe:
 
     def probe(self, file_path: Path) -> dict[str, Any]:
         """Probe a video file for metadata."""
+        # Check cache first
+        if self.cache:
+            cached_data = self.cache.get_probe_data(file_path)
+            if cached_data is not None:
+                return cached_data
+
+        # Probe the file
         cmd = [
             self.ffprobe_path,
-            "-v", "quiet",
-            "-print_format", "json",
+            "-v",
+            "quiet",
+            "-print_format",
+            "json",
             "-show_format",
             "-show_streams",
             str(file_path),
         ]
 
         try:
-            result = subprocess.run(cmd, capture_output=True, text=True, check=True)
-            return json.loads(result.stdout)
+            result = subprocess.run(
+                cmd, capture_output=True, text=True, check=True, encoding="utf-8", errors="replace"
+            )
+            data = json.loads(result.stdout)
+
+            # Cache the result
+            if self.cache and data:
+                self.cache.set_probe_data(file_path, data)
+
+            return data  # type: ignore[no-any-return]
         except (subprocess.CalledProcessError, json.JSONDecodeError, FileNotFoundError):
             return {}
 
     def get_video_info(self, file_path: Path) -> VideoInfo:
         """Extract video information from file."""
         info = VideoInfo(path=file_path)
-        
+
         try:
             data = self.probe(file_path)
             info.raw_info = data
@@ -108,6 +129,10 @@ def _get_default_probe() -> FFProbe:
     return FFProbe()
 
 
-def probe_video(file_path: Path) -> VideoInfo:
-    """Probe a video file using default FFProbe instance."""
-    return _get_default_probe().get_video_info(file_path)
+def probe_video(file_path: Path, cache: MediaCache | None = None) -> VideoInfo:
+    """Probe a video file using FFProbe instance."""
+    if cache:
+        probe = FFProbe(cache=cache)
+        return probe.get_video_info(file_path)
+    else:
+        return _get_default_probe().get_video_info(file_path)

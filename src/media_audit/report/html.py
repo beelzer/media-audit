@@ -1,22 +1,81 @@
-"""HTML report generator with embedded CSS and JavaScript."""
+"""Modern HTML report generator with interactive UI."""
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
-from datetime import datetime
+from typing import Any
 
 from jinja2 import Template
 
-from ..models import ScanResult
-
+from media_audit.models import ScanResult, ValidationStatus
 
 HTML_TEMPLATE = """<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Media Audit Report - {{ scan_time }}</title>
+    <title>Media Audit Report</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f8fafc;
+            --bg-tertiary: #f1f5f9;
+            --surface: #ffffff;
+            --surface-hover: #f8fafc;
+
+            --text-primary: #0f172a;
+            --text-secondary: #475569;
+            --text-tertiary: #94a3b8;
+
+            --border: #e2e8f0;
+            --border-hover: #cbd5e1;
+
+            --accent: #6366f1;
+            --accent-hover: #4f46e5;
+            --accent-light: #eef2ff;
+
+            --success: #10b981;
+            --success-light: #d1fae5;
+            --warning: #f59e0b;
+            --warning-light: #fed7aa;
+            --error: #ef4444;
+            --error-light: #fee2e2;
+
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+            --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1);
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg-primary: #0a0b0d;
+                --bg-secondary: #13151a;
+                --bg-tertiary: #1a1d23;
+                --surface: #1f2329;
+                --surface-hover: #262b33;
+
+                --text-primary: #f7f8f9;
+                --text-secondary: #b8bfc7;
+                --text-tertiary: #6b7280;
+
+                --border: #2d3139;
+                --border-hover: #3d414b;
+
+                --accent: #6366f1;
+                --accent-hover: #7c7ff3;
+                --accent-light: rgba(99, 102, 241, 0.1);
+
+                --success-light: rgba(16, 185, 129, 0.1);
+                --warning-light: rgba(245, 158, 11, 0.1);
+                --error-light: rgba(239, 68, 68, 0.1);
+            }
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -24,608 +83,1262 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.5;
+            font-size: 14px;
         }
 
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        /* Layout */
+        .layout {
+            display: flex;
+            height: 100vh;
             overflow: hidden;
         }
 
-        header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 30px;
-            position: sticky;
-            top: 0;
-            z-index: 100;
-        }
-
-        h1 {
-            font-size: 2.5em;
-            margin-bottom: 10px;
-        }
-
-        .header-info {
+        /* Sidebar */
+        .sidebar {
+            width: 260px;
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border);
             display: flex;
-            gap: 30px;
-            font-size: 0.9em;
-            opacity: 0.9;
+            flex-direction: column;
+            overflow: hidden;
         }
 
-        .summary {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-            padding: 30px;
-            background: #f8f9fa;
-            border-bottom: 1px solid #dee2e6;
+        .brand {
+            padding: 24px;
+            border-bottom: 1px solid var(--border);
         }
 
-        .summary-card {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            text-align: center;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-
-        .summary-card .number {
-            font-size: 2.5em;
-            font-weight: bold;
-            color: #667eea;
-        }
-
-        .summary-card .label {
-            color: #6c757d;
-            margin-top: 5px;
-        }
-
-        .controls {
-            padding: 20px 30px;
-            background: white;
-            border-bottom: 1px solid #dee2e6;
+        .brand h1 {
+            font-size: 20px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
             display: flex;
-            gap: 20px;
             align-items: center;
+            gap: 8px;
+        }
+
+        /* Stats Cards */
+        .stats-container {
+            padding: 20px;
+            display: grid;
+            gap: 12px;
+        }
+
+        .stat-card {
+            background: var(--surface);
+            border-radius: 12px;
+            padding: 16px;
+            border: 1px solid var(--border);
+            transition: all 0.2s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+            border-color: var(--accent);
+        }
+
+        .stat-value {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-tertiary);
+            font-weight: 500;
+        }
+
+        .stat-change {
+            font-size: 11px;
+            margin-top: 8px;
+            padding: 4px 8px;
+            border-radius: 20px;
+            display: inline-block;
+            font-weight: 500;
+        }
+
+        .stat-card.error .stat-value { color: var(--error); }
+        .stat-card.warning .stat-value { color: var(--warning); }
+        .stat-card.success .stat-value { color: var(--success); }
+
+        /* Navigation */
+        .nav-section {
+            padding: 12px;
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .nav-title {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-tertiary);
+            margin: 16px 8px 8px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 2px;
+        }
+
+        .nav-item:hover {
+            background: var(--surface-hover);
+        }
+
+        .nav-item.active {
+            background: var(--accent-light);
+            color: var(--accent);
+            font-weight: 500;
+        }
+
+        .nav-item input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            accent-color: var(--accent);
+            cursor: pointer;
+        }
+
+        .nav-item label {
+            flex: 1;
+            cursor: pointer;
+            margin-left: 8px;
+        }
+
+        .badge {
+            font-size: 11px;
+            padding: 2px 6px;
+            border-radius: 10px;
+            background: var(--bg-tertiary);
+            color: var(--text-tertiary);
+            font-weight: 600;
+        }
+
+        /* Main Content */
+        .main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: var(--bg-secondary);
+        }
+
+        /* Header */
+        .header {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
             flex-wrap: wrap;
         }
 
-        .search-box {
+        .search-wrapper {
             flex: 1;
             min-width: 300px;
+            max-width: 500px;
             position: relative;
         }
 
-        .search-box input {
+        .search-input {
             width: 100%;
-            padding: 10px 15px;
-            border: 2px solid #dee2e6;
-            border-radius: 25px;
+            padding: 10px 16px 10px 40px;
+            background: var(--bg-secondary);
+            border: 2px solid var(--border);
+            border-radius: 12px;
             font-size: 14px;
-            transition: border-color 0.3s;
+            color: var(--text-primary);
+            transition: all 0.2s;
         }
 
-        .search-box input:focus {
+        .search-input:focus {
             outline: none;
-            border-color: #667eea;
+            border-color: var(--accent);
+            background: var(--bg-primary);
         }
 
-        .filter-buttons {
+        .search-icon {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-tertiary);
+            pointer-events: none;
+        }
+
+        .controls {
             display: flex;
-            gap: 10px;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .btn-group {
+            display: flex;
+            background: var(--bg-secondary);
+            border-radius: 10px;
+            padding: 2px;
+            border: 1px solid var(--border);
         }
 
         .btn {
-            padding: 10px 20px;
+            padding: 8px 14px;
+            background: transparent;
             border: none;
-            border-radius: 25px;
-            background: #e9ecef;
-            color: #495057;
+            color: var(--text-secondary);
+            border-radius: 8px;
             cursor: pointer;
-            transition: all 0.3s;
-            font-size: 14px;
+            font-size: 13px;
             font-weight: 500;
-        }
-
-        .btn:hover {
-            background: #dee2e6;
+            transition: all 0.2s;
         }
 
         .btn.active {
-            background: #667eea;
-            color: white;
+            background: var(--surface);
+            color: var(--text-primary);
+            box-shadow: var(--shadow-sm);
         }
 
-        .tabs {
-            display: flex;
-            background: #f8f9fa;
-            border-bottom: 2px solid #dee2e6;
-        }
-
-        .tab {
-            padding: 15px 30px;
-            cursor: pointer;
-            transition: all 0.3s;
-            position: relative;
+        .dropdown {
+            padding: 10px 14px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            color: var(--text-primary);
+            font-size: 13px;
             font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
         }
 
-        .tab:hover {
-            background: #e9ecef;
+        .dropdown:hover {
+            border-color: var(--border-hover);
         }
 
-        .tab.active {
-            background: white;
-            color: #667eea;
+        .dropdown:focus {
+            outline: none;
+            border-color: var(--accent);
         }
 
-        .tab.active::after {
+        /* Content Area */
+        .content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+            background: var(--bg-secondary);
+        }
+
+        /* Summary Section */
+        .summary-section {
+            margin-bottom: 24px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 16px;
+        }
+
+        .summary-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .summary-card::before {
             content: '';
             position: absolute;
-            bottom: -2px;
+            top: 0;
             left: 0;
             right: 0;
-            height: 2px;
-            background: #667eea;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent), var(--warning));
         }
 
-        .tab-content {
-            display: none;
-            padding: 30px;
+        .summary-title {
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-tertiary);
+            margin-bottom: 12px;
         }
 
-        .tab-content.active {
-            display: block;
+        .summary-content {
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
         }
 
+        .summary-value {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .summary-unit {
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        /* Media Grid */
         .media-grid {
             display: grid;
-            gap: 20px;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 16px;
         }
 
-        .media-item {
-            background: white;
-            border: 1px solid #dee2e6;
-            border-radius: 8px;
-            padding: 20px;
-            transition: all 0.3s;
+        .media-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
         }
 
-        .media-item:hover {
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        /* Media Card */
+        .media-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .media-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 3px;
+            height: 100%;
+            background: var(--accent);
+            transform: scaleY(0);
+            transition: transform 0.2s;
+        }
+
+        .media-card:hover {
+            border-color: var(--border-hover);
+            box-shadow: var(--shadow-md);
             transform: translateY(-2px);
         }
 
-        .media-item.error {
-            border-left: 4px solid #dc3545;
+        .media-card:hover::before {
+            transform: scaleY(1);
         }
 
-        .media-item.warning {
-            border-left: 4px solid #ffc107;
-        }
-
-        .media-item.valid {
-            border-left: 4px solid #28a745;
+        .media-card.list-view {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 12px 16px;
         }
 
         .media-header {
             display: flex;
             justify-content: space-between;
-            align-items: start;
-            margin-bottom: 15px;
+            align-items: flex-start;
+            margin-bottom: 8px;
         }
 
         .media-title {
-            font-size: 1.2em;
+            font-size: 15px;
             font-weight: 600;
-            color: #212529;
+            color: var(--text-primary);
+            line-height: 1.3;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
         }
 
-        .media-path {
-            color: #6c757d;
-            font-size: 0.85em;
-            margin-top: 5px;
-            font-family: monospace;
+        .media-type {
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            padding: 4px 8px;
+            border-radius: 6px;
+            background: var(--accent-light);
+            color: var(--accent);
+            letter-spacing: 0.5px;
+            flex-shrink: 0;
         }
 
-        .status-badge {
-            padding: 5px 12px;
-            border-radius: 20px;
-            font-size: 0.85em;
-            font-weight: 500;
-        }
-
-        .status-badge.error {
-            background: #f8d7da;
-            color: #721c24;
-        }
-
-        .status-badge.warning {
-            background: #fff3cd;
-            color: #856404;
-        }
-
-        .status-badge.valid {
-            background: #d4edda;
-            color: #155724;
-        }
-
-        .issues-list {
-            margin-top: 15px;
-        }
-
-        .issue {
-            padding: 10px;
-            margin-bottom: 8px;
-            border-radius: 4px;
-            font-size: 0.9em;
-        }
-
-        .issue.error {
-            background: #f8d7da;
-            color: #721c24;
-        }
-
-        .issue.warning {
-            background: #fff3cd;
-            color: #856404;
-        }
-
-        .assets-info {
+        .media-meta {
+            font-size: 12px;
+            color: var(--text-tertiary);
+            margin-bottom: 12px;
             display: flex;
-            gap: 15px;
-            margin-top: 10px;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .media-meta span {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .media-meta span:not(:last-child)::after {
+            content: '•';
+            margin-left: 8px;
+            color: var(--text-tertiary);
+        }
+
+        .media-stats {
+            display: flex;
+            gap: 8px;
             flex-wrap: wrap;
         }
 
-        .asset-badge {
+        .stat-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
             padding: 4px 8px;
-            background: #e9ecef;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .stat-badge.error {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: white;
+            box-shadow: 0 2px 4px rgba(239, 68, 68, 0.2);
+        }
+
+        .stat-badge.warning {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: white;
+            box-shadow: 0 2px 4px rgba(245, 158, 11, 0.2);
+        }
+
+        .stat-badge.success {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);
+        }
+
+        .stat-badge .count {
+            background: rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 1px 5px;
             border-radius: 4px;
-            font-size: 0.85em;
-            color: #495057;
-        }
-
-        .asset-badge.present {
-            background: #d4edda;
-            color: #155724;
-        }
-
-        .asset-badge.missing {
-            background: #f8d7da;
-            color: #721c24;
-        }
-
-        footer {
-            background: #f8f9fa;
-            padding: 20px 30px;
+            font-size: 11px;
+            font-weight: 700;
+            min-width: 18px;
             text-align: center;
-            color: #6c757d;
-            font-size: 0.9em;
         }
 
-        .no-items {
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            padding: 40px 20px;
+            overflow-y: auto;
+        }
+
+        .modal.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: fadeIn 0.2s;
+        }
+
+        .modal-dialog {
+            background: var(--surface);
+            border-radius: 16px;
+            width: 100%;
+            max-width: 700px;
+            box-shadow: var(--shadow-xl);
+            animation: slideUp 0.3s;
+        }
+
+        .modal-header {
+            padding: 24px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .modal-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            color: var(--text-tertiary);
+            cursor: pointer;
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .modal-close:hover {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+        }
+
+        .modal-body {
+            padding: 24px;
+        }
+
+        .detail-section {
+            margin-bottom: 24px;
+        }
+
+        .detail-title {
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-tertiary);
+            margin-bottom: 12px;
+        }
+
+        .detail-grid {
+            display: grid;
+            grid-template-columns: 120px 1fr;
+            gap: 12px;
+            font-size: 14px;
+        }
+
+        .detail-label {
+            color: var(--text-tertiary);
+            font-weight: 500;
+        }
+
+        .detail-value {
+            color: var(--text-primary);
+        }
+
+        .detail-value a {
+            color: var(--accent);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        .detail-value a:hover {
+            color: var(--accent-hover);
+            text-decoration: underline;
+        }
+
+        .issues-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .issue-item {
+            padding: 12px;
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            border-left: 3px solid;
+            font-size: 13px;
+        }
+
+        .issue-item.error {
+            border-color: var(--error);
+            background: var(--error-light);
+        }
+
+        .issue-item.warning {
+            border-color: var(--warning);
+            background: var(--warning-light);
+        }
+
+        .issue-category {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            opacity: 0.8;
+            margin-bottom: 4px;
+        }
+
+        /* Empty State */
+        .empty-state {
             text-align: center;
+            padding: 60px 20px;
+        }
+
+        .empty-icon {
+            font-size: 48px;
+            color: var(--text-tertiary);
+            margin-bottom: 16px;
+        }
+
+        .empty-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+        }
+
+        .empty-text {
+            color: var(--text-secondary);
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(20px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        /* Loading */
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
             padding: 60px;
-            color: #6c757d;
         }
 
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Responsive */
         @media (max-width: 768px) {
-            .container {
-                margin: 0;
-                border-radius: 0;
+            .sidebar {
+                display: none;
             }
 
-            h1 {
-                font-size: 1.8em;
+            .media-grid {
+                grid-template-columns: 1fr;
             }
 
-            .tabs {
-                overflow-x: auto;
-            }
-
-            .controls {
+            .header {
                 flex-direction: column;
                 align-items: stretch;
             }
 
-            .search-box {
-                min-width: 100%;
+            .search-wrapper {
+                max-width: none;
             }
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-secondary);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-tertiary);
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>📺 Media Audit Report</h1>
-            <div class="header-info">
-                <span>📅 {{ scan_time }}</span>
-                <span>⏱️ {{ "%.2f"|format(duration) }}s</span>
-                <span>📁 {{ root_paths|length }} root path(s)</span>
+    <div class="layout">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="brand">
+                <h1>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="2" y="3" width="20" height="14" rx="2"/>
+                        <path d="M8 21h8M12 17v4"/>
+                    </svg>
+                    Media Audit
+                </h1>
             </div>
-        </header>
 
-        <div class="summary">
-            <div class="summary-card">
-                <div class="number">{{ total_items }}</div>
-                <div class="label">Total Items</div>
+            <div class="stats-container">
+                <div class="stat-card">
+                    <div class="stat-value">{{ total_items }}</div>
+                    <div class="stat-label">Total Media</div>
+                </div>
+                <div class="stat-card error">
+                    <div class="stat-value">{{ error_count }}</div>
+                    <div class="stat-label">Errors Found</div>
+                </div>
+                <div class="stat-card warning">
+                    <div class="stat-value">{{ warning_count }}</div>
+                    <div class="stat-label">Warnings</div>
+                </div>
+                <div class="stat-card success">
+                    <div class="stat-value">{{ clean_count }}</div>
+                    <div class="stat-label">Clean Items</div>
+                </div>
             </div>
-            <div class="summary-card">
-                <div class="number">{{ movies|length }}</div>
-                <div class="label">Movies</div>
-            </div>
-            <div class="summary-card">
-                <div class="number">{{ series|length }}</div>
-                <div class="label">TV Series</div>
-            </div>
-            <div class="summary-card">
-                <div class="number">{{ total_issues }}</div>
-                <div class="label">Issues Found</div>
-            </div>
-            <div class="summary-card">
-                <div class="number">{{ error_count }}</div>
-                <div class="label">Errors</div>
-            </div>
-            <div class="summary-card">
-                <div class="number">{{ warning_count }}</div>
-                <div class="label">Warnings</div>
-            </div>
-        </div>
 
-        <div class="controls">
-            <div class="search-box">
-                <input type="text" id="searchInput" placeholder="Search by name or path...">
-            </div>
-            <div class="filter-buttons">
-                <button class="btn active" onclick="filterItems('all')">All Items</button>
-                <button class="btn" onclick="filterItems('problems')">Problems Only</button>
-                <button class="btn" onclick="filterItems('valid')">Valid Only</button>
-            </div>
-        </div>
+            <nav class="nav-section">
+                <div class="nav-title">Media Type</div>
+                <div class="nav-item">
+                    <input type="checkbox" id="filter-movies" checked>
+                    <label for="filter-movies">Movies</label>
+                    <span class="badge">{{ movie_count }}</span>
+                </div>
+                <div class="nav-item">
+                    <input type="checkbox" id="filter-series" checked>
+                    <label for="filter-series">TV Series</label>
+                    <span class="badge">{{ series_count }}</span>
+                </div>
 
-        <div class="tabs">
-            <div class="tab active" onclick="showTab('movies')">Movies ({{ movies|length }})</div>
-            <div class="tab" onclick="showTab('tv')">TV Shows ({{ series|length }})</div>
-        </div>
+                <div class="nav-title">Status Filter</div>
+                <div class="nav-item">
+                    <input type="checkbox" id="filter-errors" checked>
+                    <label for="filter-errors">Has Errors</label>
+                </div>
+                <div class="nav-item">
+                    <input type="checkbox" id="filter-warnings" checked>
+                    <label for="filter-warnings">Has Warnings</label>
+                </div>
+                <div class="nav-item">
+                    <input type="checkbox" id="filter-clean" checked>
+                    <label for="filter-clean">No Issues</label>
+                </div>
 
-        <div id="movies" class="tab-content active">
-            <div class="media-grid">
-                {% if movies %}
-                    {% for movie in movies %}
-                    <div class="media-item {{ movie.status.value }}" data-name="{{ movie.name|lower }}" data-path="{{ movie.path|lower }}">
-                        <div class="media-header">
-                            <div>
-                                <div class="media-title">{{ movie.name }}{% if movie.year %} ({{ movie.year }}){% endif %}</div>
-                                <div class="media-path">{{ movie.path }}</div>
-                            </div>
-                            <span class="status-badge {{ movie.status.value }}">{{ movie.status.value|upper }}</span>
-                        </div>
-                        
-                        <div class="assets-info">
-                            <span class="asset-badge {{ 'present' if movie.assets.posters else 'missing' }}">
-                                Poster: {{ 'Yes' if movie.assets.posters else 'No' }}
-                            </span>
-                            <span class="asset-badge {{ 'present' if movie.assets.backgrounds else 'missing' }}">
-                                Background: {{ 'Yes' if movie.assets.backgrounds else 'No' }}
-                            </span>
-                            <span class="asset-badge {{ 'present' if movie.assets.trailers else 'missing' }}">
-                                Trailer: {{ 'Yes' if movie.assets.trailers else 'No' }}
-                            </span>
-                            {% if movie.video_info and movie.video_info.codec %}
-                            <span class="asset-badge">Codec: {{ movie.video_info.codec.value|upper }}</span>
-                            {% endif %}
-                        </div>
+                <div class="nav-title">Issue Types</div>
+                <div class="nav-item">
+                    <input type="checkbox" id="filter-metadata" checked>
+                    <label for="filter-metadata">Metadata</label>
+                </div>
+                <div class="nav-item">
+                    <input type="checkbox" id="filter-codec" checked>
+                    <label for="filter-codec">Codec</label>
+                </div>
+                <div class="nav-item">
+                    <input type="checkbox" id="filter-naming" checked>
+                    <label for="filter-naming">Naming</label>
+                </div>
+            </nav>
+        </aside>
 
-                        {% if movie.issues %}
-                        <div class="issues-list">
-                            {% for issue in movie.issues %}
-                            <div class="issue {{ issue.severity.value }}">
-                                <strong>{{ issue.category }}:</strong> {{ issue.message }}
-                            </div>
-                            {% endfor %}
-                        </div>
-                        {% endif %}
+        <!-- Main Content -->
+        <main class="main">
+            <header class="header">
+                <div class="search-wrapper">
+                    <svg class="search-icon" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="7" cy="7" r="5"/>
+                        <path d="M10 10l3 3"/>
+                    </svg>
+                    <input type="text" class="search-input" placeholder="Search media files...">
+                </div>
+
+                <div class="controls">
+                    <div class="btn-group">
+                        <button class="btn active" data-view="grid">
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                                <rect x="1" y="1" width="6" height="6" rx="1"/>
+                                <rect x="9" y="1" width="6" height="6" rx="1"/>
+                                <rect x="1" y="9" width="6" height="6" rx="1"/>
+                                <rect x="9" y="9" width="6" height="6" rx="1"/>
+                            </svg>
+                        </button>
+                        <button class="btn" data-view="list">
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                                <rect x="1" y="2" width="14" height="2" rx="1"/>
+                                <rect x="1" y="7" width="14" height="2" rx="1"/>
+                                <rect x="1" y="12" width="14" height="2" rx="1"/>
+                            </svg>
+                        </button>
                     </div>
-                    {% endfor %}
-                {% else %}
-                    <div class="no-items">No movies found</div>
-                {% endif %}
+
+                    <select class="dropdown">
+                        <option value="name">Name</option>
+                        <option value="issues">Issues</option>
+                        <option value="type">Type</option>
+                        <option value="year">Year</option>
+                    </select>
+                </div>
+            </header>
+
+            <div class="content">
+                <div id="items-container" class="media-grid"></div>
             </div>
-        </div>
+        </main>
+    </div>
 
-        <div id="tv" class="tab-content">
-            <div class="media-grid">
-                {% if series %}
-                    {% for show in series %}
-                    <div class="media-item {{ show.status.value }}" data-name="{{ show.name|lower }}" data-path="{{ show.path|lower }}">
-                        <div class="media-header">
-                            <div>
-                                <div class="media-title">{{ show.name }}</div>
-                                <div class="media-path">{{ show.path }}</div>
-                            </div>
-                            <span class="status-badge {{ show.status.value }}">{{ show.status.value|upper }}</span>
-                        </div>
-                        
-                        <div class="assets-info">
-                            <span class="asset-badge">{{ show.total_episodes }} episodes</span>
-                            <span class="asset-badge">{{ show.seasons|length }} seasons</span>
-                            <span class="asset-badge {{ 'present' if show.assets.posters else 'missing' }}">
-                                Poster: {{ 'Yes' if show.assets.posters else 'No' }}
-                            </span>
-                            <span class="asset-badge {{ 'present' if show.assets.backgrounds else 'missing' }}">
-                                Background: {{ 'Yes' if show.assets.backgrounds else 'No' }}
-                            </span>
-                        </div>
-
-                        {% if show.issues %}
-                        <div class="issues-list">
-                            {% for issue in show.issues %}
-                            <div class="issue {{ issue.severity.value }}">
-                                <strong>{{ issue.category }}:</strong> {{ issue.message }}
-                            </div>
-                            {% endfor %}
-                        </div>
-                        {% endif %}
-                    </div>
-                    {% endfor %}
-                {% else %}
-                    <div class="no-items">No TV shows found</div>
-                {% endif %}
+    <!-- Modal -->
+    <div class="modal" id="detailModal">
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <h2 class="modal-title">
+                    <span id="modalTitle"></span>
+                    <button class="modal-close" onclick="closeModal()">×</button>
+                </h2>
             </div>
+            <div class="modal-body" id="modalBody"></div>
         </div>
-
-        <footer>
-            <p>Generated on {{ scan_time }} | Duration: {{ "%.2f"|format(duration) }} seconds</p>
-            <p>Scanned: {{ root_paths|join(", ") }}</p>
-        </footer>
     </div>
 
     <script>
-        let currentFilter = 'all';
-        let currentTab = 'movies';
+        // Data
+        const scanData = {{ scan_data|safe }};
+        let filteredItems = [];
+        let currentView = 'grid';
+        let currentSort = 'name';
+        let loadedCount = 0;
+        const ITEMS_PER_PAGE = 50;
 
-        function showTab(tabName) {
-            // Update tabs
-            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
-            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-            
-            event.target.classList.add('active');
-            document.getElementById(tabName).classList.add('active');
-            currentTab = tabName;
-            
-            // Reapply filters
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            processData();
+            setupEventListeners();
             applyFilters();
+        });
+
+        function processData() {
+            filteredItems = [
+                ...scanData.movies.map(m => ({...m, type: 'movie'})),
+                ...scanData.series.map(s => ({...s, type: 'series'}))
+            ];
         }
 
-        function filterItems(filterType) {
-            currentFilter = filterType;
-            
-            // Update buttons
-            document.querySelectorAll('.filter-buttons .btn').forEach(btn => btn.classList.remove('active'));
-            event.target.classList.add('active');
-            
-            applyFilters();
+        function setupEventListeners() {
+            // Search
+            let searchTimeout;
+            document.querySelector('.search-input').addEventListener('input', (e) => {
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(() => applyFilters(), 300);
+            });
+
+            // View toggle
+            document.querySelectorAll('.btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const view = btn.dataset.view;
+                    if (view) {
+                        document.querySelectorAll('.btn').forEach(b => b.classList.remove('active'));
+                        btn.classList.add('active');
+                        currentView = view;
+                        renderItems();
+                    }
+                });
+            });
+
+            // Sort
+            document.querySelector('.dropdown').addEventListener('change', (e) => {
+                currentSort = e.target.value;
+                sortItems();
+                renderItems();
+            });
+
+            // Filters
+            document.querySelectorAll('.nav-item input').forEach(checkbox => {
+                checkbox.addEventListener('change', applyFilters);
+            });
+
+            // Infinite scroll
+            document.querySelector('.content').addEventListener('scroll', (e) => {
+                const el = e.target;
+                if (el.scrollTop + el.clientHeight >= el.scrollHeight - 100) {
+                    loadMore();
+                }
+            });
         }
 
         function applyFilters() {
-            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-            const items = document.querySelectorAll(`#${currentTab} .media-item`);
-            
+            const searchTerm = document.querySelector('.search-input').value.toLowerCase();
+            const showMovies = document.getElementById('filter-movies').checked;
+            const showSeries = document.getElementById('filter-series').checked;
+            const showErrors = document.getElementById('filter-errors').checked;
+            const showWarnings = document.getElementById('filter-warnings').checked;
+            const showClean = document.getElementById('filter-clean').checked;
+
+            let items = [];
+            if (showMovies) items.push(...scanData.movies.map(m => ({...m, type: 'movie'})));
+            if (showSeries) items.push(...scanData.series.map(s => ({...s, type: 'series'})));
+
+            filteredItems = items.filter(item => {
+                const hasErrors = item.issues.some(i => i.severity === 'error');
+                const hasWarnings = item.issues.some(i => i.severity === 'warning');
+                const isClean = item.issues.length === 0;
+
+                const statusMatch = (hasErrors && showErrors) ||
+                                  (hasWarnings && !hasErrors && showWarnings) ||
+                                  (isClean && showClean);
+
+                if (!statusMatch) return false;
+
+                if (searchTerm) {
+                    return item.name.toLowerCase().includes(searchTerm) ||
+                           item.path.toLowerCase().includes(searchTerm);
+                }
+
+                return true;
+            });
+
+            sortItems();
+            renderItems();
+        }
+
+        function sortItems() {
+            filteredItems.sort((a, b) => {
+                switch(currentSort) {
+                    case 'name':
+                        return a.name.localeCompare(b.name);
+                    case 'issues':
+                        return b.issues.length - a.issues.length;
+                    case 'type':
+                        return a.type.localeCompare(b.type);
+                    case 'year':
+                        return (b.year || 0) - (a.year || 0);
+                    default:
+                        return 0;
+                }
+            });
+        }
+
+        function renderItems() {
+            const container = document.getElementById('items-container');
+            container.className = currentView === 'grid' ? 'media-grid' : 'media-list';
+
+            loadedCount = 0;
+            container.innerHTML = '';
+            loadMore();
+        }
+
+        function loadMore() {
+            const container = document.getElementById('items-container');
+            const items = filteredItems.slice(loadedCount, loadedCount + ITEMS_PER_PAGE);
+
+            if (items.length === 0 && loadedCount === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">📂</div>
+                        <div class="empty-title">No items found</div>
+                        <div class="empty-text">Try adjusting your filters or search terms</div>
+                    </div>
+                `;
+                return;
+            }
+
             items.forEach(item => {
-                const name = item.dataset.name;
-                const path = item.dataset.path;
-                const status = item.classList.contains('error') ? 'error' : 
-                              item.classList.contains('warning') ? 'warning' : 'valid';
-                
-                let show = true;
-                
-                // Search filter
-                if (searchTerm && !name.includes(searchTerm) && !path.includes(searchTerm)) {
-                    show = false;
-                }
-                
-                // Status filter
-                if (currentFilter === 'problems' && status === 'valid') {
-                    show = false;
-                } else if (currentFilter === 'valid' && status !== 'valid') {
-                    show = false;
-                }
-                
-                item.style.display = show ? 'block' : 'none';
+                container.insertAdjacentHTML('beforeend', createItemCard(item));
             });
+
+            loadedCount += items.length;
         }
 
-        // Search functionality
-        document.getElementById('searchInput').addEventListener('input', applyFilters);
+        function createItemCard(item) {
+            const errorCount = item.issues.filter(i => i.severity === 'error').length;
+            const warningCount = item.issues.filter(i => i.severity === 'warning').length;
+            const listClass = currentView === 'list' ? 'list-view' : '';
 
-        // Sort functionality
-        function sortItems(sortBy) {
-            const container = document.querySelector(`#${currentTab} .media-grid`);
-            const items = Array.from(container.querySelectorAll('.media-item'));
-            
-            items.sort((a, b) => {
-                if (sortBy === 'name') {
-                    return a.dataset.name.localeCompare(b.dataset.name);
-                } else if (sortBy === 'status') {
-                    const statusOrder = { 'error': 0, 'warning': 1, 'valid': 2 };
-                    const aStatus = a.classList.contains('error') ? 'error' : 
-                                  a.classList.contains('warning') ? 'warning' : 'valid';
-                    const bStatus = b.classList.contains('error') ? 'error' : 
-                                  b.classList.contains('warning') ? 'warning' : 'valid';
-                    return statusOrder[aStatus] - statusOrder[bStatus];
-                }
-            });
-            
-            items.forEach(item => container.appendChild(item));
+            return `
+                <div class="media-card ${listClass}" onclick="showDetails('${item.type}', '${escapeHtml(item.name)}')">
+                    <div class="media-header">
+                        <div class="media-title">${escapeHtml(item.name)}</div>
+                        ${currentView === 'grid' ? `<span class="media-type">${item.type}</span>` : ''}
+                    </div>
+                    <div class="media-meta">
+                        <span>${item.year || 'Unknown Year'}</span>
+                        <span>${item.type === 'series' ? item.total_episodes + ' episodes' : 'Movie'}</span>
+                    </div>
+                    <div class="media-stats">
+                        ${errorCount > 0 ? `<div class="stat-badge error">Errors <span class="count">${errorCount}</span></div>` : ''}
+                        ${warningCount > 0 ? `<div class="stat-badge warning">Warnings <span class="count">${warningCount}</span></div>` : ''}
+                        ${item.issues.length === 0 ? '<div class="stat-badge success">✓ Clean</div>' : ''}
+                    </div>
+                </div>
+            `;
         }
+
+        function showDetails(type, name) {
+            const items = type === 'movie' ? scanData.movies : scanData.series;
+            const item = items.find(i => i.name === name);
+            if (!item) return;
+
+            document.getElementById('modalTitle').textContent = item.name;
+
+            let detailsHTML = `
+                <div class="detail-section">
+                    <div class="detail-title">Information</div>
+                    <div class="detail-grid">
+                        <div class="detail-label">Path</div>
+                        <div class="detail-value">${escapeHtml(item.path)}</div>
+
+                        ${item.year ? `
+                            <div class="detail-label">Year</div>
+                            <div class="detail-value">${item.year}</div>
+                        ` : ''}
+
+                        ${item.imdb_id ? `
+                            <div class="detail-label">IMDb</div>
+                            <div class="detail-value">
+                                <a href="https://www.imdb.com/title/${item.imdb_id}" target="_blank">${item.imdb_id} ↗</a>
+                            </div>
+                        ` : ''}
+
+                        ${item.tmdb_id ? `
+                            <div class="detail-label">TMDB</div>
+                            <div class="detail-value">
+                                <a href="https://www.themoviedb.org/${item.type === 'movie' ? 'movie' : 'tv'}/${item.tmdb_id}" target="_blank">${item.tmdb_id} ↗</a>
+                            </div>
+                        ` : ''}
+
+                        ${item.tvdb_id ? `
+                            <div class="detail-label">TVDB</div>
+                            <div class="detail-value">${item.tvdb_id}</div>
+                        ` : ''}
+
+                        ${item.release_group ? `
+                            <div class="detail-label">Release Group</div>
+                            <div class="detail-value">${item.release_group}</div>
+                        ` : ''}
+
+                        ${item.quality ? `
+                            <div class="detail-label">Quality</div>
+                            <div class="detail-value">${item.quality}</div>
+                        ` : ''}
+
+                        ${item.source ? `
+                            <div class="detail-label">Source</div>
+                            <div class="detail-value">${item.source}</div>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+
+            if (item.issues.length > 0) {
+                const errors = item.issues.filter(i => i.severity === 'error');
+                const warnings = item.issues.filter(i => i.severity === 'warning');
+
+                detailsHTML += `
+                    <div class="detail-section">
+                        <div class="detail-title">Issues (${item.issues.length})</div>
+                        <div class="issues-list">
+                `;
+
+                if (errors.length > 0) {
+                    errors.forEach(issue => {
+                        detailsHTML += `
+                            <div class="issue-item error">
+                                <div class="issue-category">${issue.category}</div>
+                                <div>${escapeHtml(issue.message)}</div>
+                            </div>
+                        `;
+                    });
+                }
+
+                if (warnings.length > 0) {
+                    warnings.forEach(issue => {
+                        detailsHTML += `
+                            <div class="issue-item warning">
+                                <div class="issue-category">${issue.category}</div>
+                                <div>${escapeHtml(issue.message)}</div>
+                            </div>
+                        `;
+                    });
+                }
+
+                detailsHTML += '</div></div>';
+            } else {
+                detailsHTML += `
+                    <div class="detail-section">
+                        <div class="detail-title">Status</div>
+                        <div class="stat-badge success">✓ No issues found</div>
+                    </div>
+                `;
+            }
+
+            document.getElementById('modalBody').innerHTML = detailsHTML;
+            document.getElementById('detailModal').classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('detailModal').classList.remove('active');
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text || '';
+            return div.innerHTML;
+        }
+
+        // Close modal on outside click
+        document.getElementById('detailModal').addEventListener('click', (e) => {
+            if (e.target === e.currentTarget) {
+                closeModal();
+            }
+        });
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeModal();
+            }
+            if (e.key === '/' && e.target.tagName !== 'INPUT') {
+                e.preventDefault();
+                document.querySelector('.search-input').focus();
+            }
+        });
     </script>
 </body>
 </html>"""
 
 
 class HTMLReportGenerator:
-    """Generates beautiful HTML reports from scan results."""
+    """Generates modern interactive HTML reports."""
 
-    def generate(self, result: ScanResult, output_path: Path, problems_only: bool = False) -> None:
+    def generate(
+        self,
+        result: ScanResult,
+        output_path: Path,
+        problems_only: bool = False,
+    ) -> None:
         """Generate HTML report file."""
-        template = Template(HTML_TEMPLATE)
-        
-        # Calculate counts
-        error_count = sum(
-            1 for issue in self._get_all_issues(result)
-            if issue.severity.value == "error"
-        )
-        warning_count = sum(
-            1 for issue in self._get_all_issues(result)
-            if issue.severity.value == "warning"
-        )
-
-        # Filter items if problems_only
-        movies = result.movies
-        series = result.series
-        if problems_only:
-            movies = [m for m in movies if m.has_issues]
-            series = [s for s in series if s.has_issues]
-
-        # Render template
-        html = template.render(
-            scan_time=result.scan_time.strftime("%Y-%m-%d %H:%M:%S"),
-            duration=result.duration,
-            root_paths=[str(p) for p in result.root_paths],
-            total_items=result.total_items,
-            total_issues=result.total_issues,
-            error_count=error_count,
-            warning_count=warning_count,
-            movies=movies,
-            series=series,
-            errors=result.errors,
-        )
-
         # Ensure directory exists
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
-        # Write HTML file
-        with open(output_path, "w", encoding="utf-8") as f:
-            f.write(html)
+        # Prepare data
+        movies_data = []
+        series_data = []
 
-    def _get_all_issues(self, result: ScanResult):
-        """Get all issues from scan result."""
-        issues = []
         for movie in result.movies:
-            issues.extend(movie.issues)
+            if problems_only and len(movie.issues) == 0:
+                continue
+            movies_data.append(self._serialize_movie(movie))
+
         for series in result.series:
-            issues.extend(series.issues)
-            for season in series.seasons:
-                issues.extend(season.issues)
-                for episode in season.episodes:
-                    issues.extend(episode.issues)
-        return issues
+            if problems_only and len(series.issues) == 0:
+                continue
+            series_data.append(self._serialize_series(series))
+
+        # Count statistics
+        error_count = sum(
+            1 for m in result.movies for i in m.issues if i.severity == ValidationStatus.ERROR
+        )
+        error_count += sum(
+            1 for s in result.series for i in s.issues if i.severity == ValidationStatus.ERROR
+        )
+
+        warning_count = sum(
+            1 for m in result.movies for i in m.issues if i.severity == ValidationStatus.WARNING
+        )
+        warning_count += sum(
+            1 for s in result.series for i in s.issues if i.severity == ValidationStatus.WARNING
+        )
+
+        clean_count = sum(1 for m in result.movies if len(m.issues) == 0)
+        clean_count += sum(1 for s in result.series if len(s.issues) == 0)
+
+        # Prepare scan data as JSON
+        scan_data = {
+            "movies": movies_data,
+            "series": series_data,
+        }
+
+        # Render template
+        template = Template(HTML_TEMPLATE)
+        html_content = template.render(
+            scan_data=json.dumps(scan_data),
+            total_items=len(movies_data) + len(series_data),
+            movie_count=len(movies_data),
+            series_count=len(series_data),
+            error_count=error_count,
+            warning_count=warning_count,
+            clean_count=clean_count,
+        )
+
+        # Write report
+        with open(output_path, "w", encoding="utf-8") as f:
+            f.write(html_content)
+
+    def _serialize_movie(self, movie: Any) -> dict[str, Any]:
+        """Serialize movie for JSON embedding."""
+        return {
+            "name": movie.name,
+            "path": str(movie.path),
+            "year": movie.year,
+            "imdb_id": movie.imdb_id,
+            "tmdb_id": movie.tmdb_id,
+            "release_group": movie.release_group,
+            "quality": movie.quality,
+            "source": movie.source,
+            "issues": [
+                {
+                    "category": issue.category,
+                    "message": issue.message,
+                    "severity": issue.severity.value,
+                }
+                for issue in movie.issues
+            ],
+        }
+
+    def _serialize_series(self, series: Any) -> dict[str, Any]:
+        """Serialize series for JSON embedding."""
+        # Aggregate all issues from series and its seasons/episodes
+        all_issues = list(series.issues)
+        for season in series.seasons:
+            all_issues.extend(season.issues)
+            for episode in season.episodes:
+                all_issues.extend(episode.issues)
+
+        return {
+            "name": series.name,
+            "path": str(series.path),
+            "total_episodes": series.total_episodes,
+            "imdb_id": series.imdb_id,
+            "tvdb_id": series.tvdb_id,
+            "tmdb_id": series.tmdb_id,
+            "issues": [
+                {
+                    "category": issue.category,
+                    "message": issue.message,
+                    "severity": issue.severity.value,
+                }
+                for issue in all_issues
+            ],
+        }

@@ -3,17 +3,14 @@
 import tempfile
 from pathlib import Path
 
-import pytest
-import yaml
-
-from media_audit.config import Config, ScanConfig, ReportConfig
+from media_audit.config import Config, ReportConfig, ScanConfig
 from media_audit.models import CodecType
 
 
 def test_scan_config_defaults():
     """Test ScanConfig default values."""
     config = ScanConfig()
-    
+
     assert config.root_paths == []
     assert config.profiles == ["all"]
     assert CodecType.HEVC in config.allowed_codecs
@@ -25,7 +22,7 @@ def test_scan_config_defaults():
 def test_report_config_defaults():
     """Test ReportConfig default values."""
     config = ReportConfig()
-    
+
     assert config.output_path is None
     assert config.json_path is None
     assert config.auto_open is False
@@ -47,9 +44,9 @@ def test_config_from_dict():
             "auto_open": True,
         },
     }
-    
+
     config = Config.from_dict(data)
-    
+
     assert len(config.scan.root_paths) == 2
     assert config.scan.profiles == ["plex"]
     assert len(config.scan.allowed_codecs) == 2
@@ -61,7 +58,7 @@ def test_config_save_load():
     """Test saving and loading config from YAML."""
     with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
         temp_path = Path(f.name)
-    
+
     try:
         # Create and save config
         config = Config(
@@ -74,16 +71,16 @@ def test_config_save_load():
                 auto_open=True,
             ),
         )
-        
+
         config.save(temp_path)
-        
+
         # Load and verify
         loaded_config = Config.from_file(temp_path)
-        
+
         assert len(loaded_config.scan.root_paths) == 1
         assert loaded_config.scan.profiles == ["jellyfin"]
         assert loaded_config.report.auto_open is True
-        
+
     finally:
         temp_path.unlink()
 
@@ -95,9 +92,9 @@ def test_config_codec_conversion():
             "allowed_codecs": ["hevc", "H264", "AV1", "invalid"],
         }
     }
-    
+
     config = Config.from_dict(data)
-    
+
     assert CodecType.HEVC in config.scan.allowed_codecs
     assert CodecType.H264 in config.scan.allowed_codecs
     assert CodecType.AV1 in config.scan.allowed_codecs

@@ -4,10 +4,13 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING
 
-from ..models import MediaAssets, MediaItem
-from ..patterns import CompiledPatterns
+from media_audit.models import MediaAssets
+from media_audit.patterns import CompiledPatterns
+
+if TYPE_CHECKING:
+    from media_audit.cache import MediaCache
 
 
 class BaseParser:
@@ -16,9 +19,10 @@ class BaseParser:
     VIDEO_EXTENSIONS = {".mkv", ".mp4", ".avi", ".mov", ".wmv", ".m4v", ".webm"}
     IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".tiff", ".bmp"}
 
-    def __init__(self, patterns: CompiledPatterns):
+    def __init__(self, patterns: CompiledPatterns, cache: MediaCache | None = None):
         """Initialize parser with compiled patterns."""
         self.patterns = patterns
+        self.cache = cache
 
     def is_video_file(self, path: Path) -> bool:
         """Check if file is a video."""
@@ -30,16 +34,15 @@ class BaseParser:
 
     def match_pattern(self, filename: str, patterns: list[re.Pattern[str]]) -> bool:
         """Check if filename matches any pattern."""
-        for pattern in patterns:
-            if pattern.search(filename):
-                return True
-        return False
+        return any(pattern.search(filename) for pattern in patterns)
 
     def classify_asset(self, file_path: Path, base_path: Path) -> tuple[str, Path] | None:
         """Classify an asset file based on patterns."""
-        if not self.is_image_file(file_path) and not file_path.is_dir():
-            if not file_path.suffix.lower() in {".mp4", ".mkv", ".mov", ".avi"}:
-                return None
+        is_image = self.is_image_file(file_path)
+        is_video = file_path.suffix.lower() in {".mp4", ".mkv", ".mov", ".avi"}
+
+        if not is_image and not is_video:
+            return None
 
         # Get relative path for pattern matching
         try:
@@ -48,17 +51,20 @@ class BaseParser:
         except ValueError:
             filename = file_path.name
 
-        # Check patterns
-        if self.match_pattern(filename, self.patterns.poster_re):
-            return ("poster", file_path)
-        elif self.match_pattern(filename, self.patterns.background_re):
-            return ("background", file_path)
-        elif self.match_pattern(filename, self.patterns.banner_re):
-            return ("banner", file_path)
-        elif self.match_pattern(filename, self.patterns.trailer_re):
+        # Check patterns - only image files can be posters, backgrounds, banners, title cards
+        if is_image:
+            if self.match_pattern(filename, self.patterns.poster_re):
+                return ("poster", file_path)
+            elif self.match_pattern(filename, self.patterns.background_re):
+                return ("background", file_path)
+            elif self.match_pattern(filename, self.patterns.banner_re):
+                return ("banner", file_path)
+            elif self.match_pattern(filename, self.patterns.title_card_re):
+                return ("title_card", file_path)
+
+        # Only video files can be trailers
+        if is_video and self.match_pattern(filename, self.patterns.trailer_re):
             return ("trailer", file_path)
-        elif self.match_pattern(filename, self.patterns.title_card_re):
-            return ("title_card", file_path)
 
         return None
 
@@ -92,4 +98,68 @@ class BaseParser:
             year = int(match.group(1))
             if 1900 <= year <= 2100:  # Reasonable year range
                 return year
+        return None
+
+    def extract_imdb_id(self, text: str) -> str | None:
+        """Extract IMDB ID from text."""
+        match = re.search(r"(?:imdb[-_]?)?(tt\d{7,8})", text, re.IGNORECASE)
+        return match.group(1) if match else None
+
+    def extract_release_group(self, text: str) -> str | None:
+        """Extract release group from filename."""
+        # Common pattern: -GROUP at end or [GROUP] at end
+        patterns = [
+            r"-([A-Za-z0-9]+)(?:\.\w{3,4})?$",  # -GROUP.ext
+            r"\[([A-Za-z0-9]+)\](?:\.\w{3,4})?$",  # [GROUP].ext
+            r"-([A-Za-z0-9]+)\s*(?:\[|$)",  # -GROUP followed by [ or end
+        ]
+        for pattern in patterns:
+            match = re.search(pattern, text)
+            if match:
+                return match.group(1)
+        return None
+
+    def extract_quality(self, text: str) -> str | None:
+        """Extract quality from filename."""
+        qualities = ["2160p", "4K", "1080p", "720p", "480p", "360p", "UHD", "FHD", "HD", "SD"]
+        text_upper = text.upper()
+        for quality in qualities:
+            if quality.upper() in text_upper:
+                return quality
+        return None
+
+    def extract_source(self, text: str) -> str | None:
+        """Extract source from filename."""
+        # Order matters - check more specific patterns first
+        sources = [
+            ("WEB-DL", "WEBDL"),
+            ("WEBRip", "WEBRIP"),
+            ("BluRay", "BLURAY"),
+            ("Blu-Ray", "BLURAY"),
+            ("BDRip", "BDRIP"),
+            ("BRRip", "BRRIP"),
+            ("HDTVRip", "HDTVRIP"),
+            ("HDTV", "HDTV"),
+            ("DVDRip", "DVDRIP"),
+            ("DVDSCR", "DVDSCR"),
+            ("DVD", "DVD"),
+            ("CAM", "CAM"),
+            ("TS", "TS"),
+            ("TC", "TC"),
+            ("SCR", "SCR"),
+            ("WEB", "WEB"),
+            ("BD", "BD"),
+        ]
+
+        # Normalize text but keep some separation
+        text_normalized = text.upper()
+        # Replace common separators with spaces for better word detection
+        for sep in ["-", ".", "_", "[", "]", "(", ")"]:
+            text_normalized = text_normalized.replace(sep, " ")
+
+        for source_orig, source_pattern in sources:
+            # Check if the source pattern exists in the normalized text
+            if source_pattern in text_normalized.replace(" ", ""):
+                return source_orig.replace("-", "")
+
         return None

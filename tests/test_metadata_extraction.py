@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
 import pytest
 
 from media_audit.parsers import MovieParser, TVParser
@@ -64,14 +62,14 @@ def test_movie_metadata_parsing(movie_parser, tmp_path):
     # Create movie directory with metadata in name
     movie_dir = tmp_path / "Jason X (2001) {imdb-tt0211443}"
     movie_dir.mkdir()
-    
+
     # Create video file with quality info
     video_file = movie_dir / "Jason.X.2001.Bluray-1080p.AAC.5.1.x264-RARBG.mkv"
     video_file.write_text("")
-    
+
     # Parse movie
     movie = movie_parser.parse(movie_dir)
-    
+
     assert movie is not None
     assert movie.name == "Jason X"
     assert movie.year == 2001
@@ -86,22 +84,25 @@ def test_episode_metadata_parsing(tv_parser, tmp_path):
     # Create series directory
     series_dir = tmp_path / "Peacemaker (2022)"
     series_dir.mkdir()
-    
+
     # Create season directory
     season_dir = series_dir / "Season 2"
     season_dir.mkdir()
-    
+
     # Create episode with metadata
-    episode_file = season_dir / "Peacemaker.S02E01.The.Ties.That.Grind.WEBDL-1080p.EAC3.5.1.h264-successfulcrab.mkv"
+    episode_file = (
+        season_dir
+        / "Peacemaker.S02E01.The.Ties.That.Grind.WEBDL-1080p.EAC3.5.1.h264-successfulcrab.mkv"
+    )
     episode_file.write_text("")
-    
+
     # Parse series
     series = tv_parser.parse(series_dir)
-    
+
     assert series is not None
     assert len(series.seasons) == 1
     assert len(series.seasons[0].episodes) == 1
-    
+
     episode = series.seasons[0].episodes[0]
     assert episode.season_number == 2
     assert episode.episode_number == 1
@@ -115,20 +116,20 @@ def test_plexmatch_parsing(tv_parser, tmp_path):
     # Create series directory
     series_dir = tmp_path / "Test Series"
     series_dir.mkdir()
-    
+
     # Create .plexmatch file
     plexmatch_file = series_dir / ".plexmatch"
     plexmatch_file.write_text("""TvdbId: 391153
 ImdbId: tt13146488
 TmdbId: 110492
 """)
-    
+
     # Create a season so it's recognized as TV
     (series_dir / "Season 1").mkdir()
-    
+
     # Parse series
     series = tv_parser.parse(series_dir)
-    
+
     assert series is not None
     assert series.tvdb_id == "391153"
     assert series.imdb_id == "tt13146488"

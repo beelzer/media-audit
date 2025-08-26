@@ -105,8 +105,13 @@ class MovieItem(MediaItem):
 
     year: int | None = None
     video_info: VideoInfo | None = None
+    imdb_id: str | None = None
+    tmdb_id: str | None = None
+    release_group: str | None = None
+    quality: str | None = None
+    source: str | None = None  # BluRay, WEBDL, WEBRip, etc.
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         self.type = MediaType.MOVIE
 
 
@@ -114,12 +119,15 @@ class MovieItem(MediaItem):
 class EpisodeItem(MediaItem):
     """Represents a TV episode."""
 
-    season_number: int
-    episode_number: int
+    season_number: int = 0
+    episode_number: int = 0
     episode_title: str | None = None
     video_info: VideoInfo | None = None
+    release_group: str | None = None
+    quality: str | None = None
+    source: str | None = None  # WEBDL, WEBRip, HDTV, etc.
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         self.type = MediaType.TV_EPISODE
 
 
@@ -127,10 +135,10 @@ class EpisodeItem(MediaItem):
 class SeasonItem(MediaItem):
     """Represents a TV season."""
 
-    season_number: int
+    season_number: int = 0
     episodes: list[EpisodeItem] = field(default_factory=list)
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         self.type = MediaType.TV_SEASON
 
 
@@ -140,12 +148,15 @@ class SeriesItem(MediaItem):
 
     seasons: list[SeasonItem] = field(default_factory=list)
     total_episodes: int = 0
+    imdb_id: str | None = None
+    tvdb_id: str | None = None
+    tmdb_id: str | None = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         self.type = MediaType.TV_SERIES
         self.update_episode_count()
 
-    def update_episode_count(self):
+    def update_episode_count(self) -> None:
         """Update total episode count."""
         self.total_episodes = sum(len(season.episodes) for season in self.seasons)
 
@@ -163,10 +174,10 @@ class ScanResult:
     total_issues: int = 0
     errors: list[str] = field(default_factory=list)
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         self.update_stats()
 
-    def update_stats(self):
+    def update_stats(self) -> None:
         """Update scan statistics."""
         self.total_items = len(self.movies) + len(self.series)
         self.total_issues = (
@@ -183,7 +194,7 @@ class ScanResult:
 
     def get_items_with_issues(self) -> list[MediaItem]:
         """Get all items with validation issues."""
-        items = []
+        items: list[MediaItem] = []
         for movie in self.movies:
             if movie.has_issues:
                 items.append(movie)

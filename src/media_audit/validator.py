@@ -3,17 +3,18 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from .models import (
     CodecType,
+    EpisodeItem,
     MediaItem,
     MovieItem,
-    SeriesItem,
     SeasonItem,
-    EpisodeItem,
+    SeriesItem,
     ValidationIssue,
     ValidationStatus,
+    VideoInfo,
 )
 from .probe import probe_video
 
@@ -24,10 +25,11 @@ if TYPE_CHECKING:
 class MediaValidator:
     """Validates media items against configured rules."""
 
-    def __init__(self, config: ScanConfig):
+    def __init__(self, config: ScanConfig, cache: Any = None) -> None:
         """Initialize validator with configuration."""
         self.config = config
         self.allowed_codecs = set(config.allowed_codecs)
+        self.cache = cache
 
     def validate(self, item: MediaItem) -> None:
         """Validate a media item and add issues."""
@@ -164,7 +166,7 @@ class MediaValidator:
             episode.issues.append(
                 ValidationIssue(
                     category="video",
-                    message=f"No video file found for episode",
+                    message="No video file found for episode",
                     severity=ValidationStatus.ERROR,
                 )
             )
@@ -174,7 +176,7 @@ class MediaValidator:
         # Probe video if not already done
         if video_info.codec is None:
             try:
-                probed_info = probe_video(video_info.path)
+                probed_info = probe_video(video_info.path, cache=self.cache)
                 video_info.codec = probed_info.codec
                 video_info.resolution = probed_info.resolution
                 video_info.duration = probed_info.duration

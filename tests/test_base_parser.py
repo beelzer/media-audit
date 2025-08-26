@@ -1,12 +1,11 @@
 """Tests for base parser functionality."""
 
 from pathlib import Path
-from unittest.mock import MagicMock, patch
 
 import pytest
 
 from media_audit.parsers.base import BaseParser
-from media_audit.patterns import CompiledPatterns, get_patterns
+from media_audit.patterns import get_patterns
 
 
 @pytest.fixture
@@ -48,22 +47,22 @@ def test_parse_year(base_parser):
 def test_classify_asset(base_parser):
     """Test asset classification."""
     base_path = Path("/media")
-    
+
     # Test poster classification
     poster_path = Path("/media/poster.jpg")
     result = base_parser.classify_asset(poster_path, base_path)
     assert result == ("poster", poster_path)
-    
+
     # Test background classification
     background_path = Path("/media/fanart.jpg")
     result = base_parser.classify_asset(background_path, base_path)
     assert result == ("background", background_path)
-    
+
     # Test trailer classification
     trailer_path = Path("/media/trailer.mp4")
     result = base_parser.classify_asset(trailer_path, base_path)
     assert result == ("trailer", trailer_path)
-    
+
     # Test non-media file
     text_path = Path("/media/readme.txt")
     result = base_parser.classify_asset(text_path, base_path)
@@ -75,7 +74,7 @@ def test_scan_assets(base_parser, tmp_path):
     # Create test directory structure
     media_dir = tmp_path / "media"
     media_dir.mkdir()
-    
+
     # Create test files
     (media_dir / "poster.jpg").touch()
     (media_dir / "fanart.jpg").touch()
@@ -83,13 +82,13 @@ def test_scan_assets(base_parser, tmp_path):
     (media_dir / "trailer.mp4").touch()
     (media_dir / "movie.mkv").touch()  # Should not be classified as asset
     (media_dir / "readme.txt").touch()  # Should be ignored
-    
+
     # Create title card in main directory
     (media_dir / "S01E01.jpg").touch()  # Title card for episode
-    
+
     # Scan for assets
     assets = base_parser.scan_assets(media_dir)
-    
+
     # Verify results
     assert len(assets.posters) == 1
     assert len(assets.backgrounds) == 1
@@ -101,12 +100,12 @@ def test_scan_assets(base_parser, tmp_path):
 def test_match_pattern(base_parser):
     """Test pattern matching."""
     import re
-    
+
     patterns = [
         re.compile(r"poster"),
         re.compile(r"cover"),
     ]
-    
+
     assert base_parser.match_pattern("poster.jpg", patterns)
     assert base_parser.match_pattern("movie-cover.png", patterns)
     assert not base_parser.match_pattern("fanart.jpg", patterns)
