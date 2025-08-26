@@ -321,19 +321,21 @@ jobs:
 
       - name: Add build summary
         run: |
-          echo "### 📚 Documentation Build Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "- **Status**: ✅ Built successfully" >> $GITHUB_STEP_SUMMARY
-          echo "- **MkDocs Version**: $(uv run mkdocs --version)" >> $GITHUB_STEP_SUMMARY
-          echo "- **Files Generated**: $(find site -type f | wc -l)" >> $GITHUB_STEP_SUMMARY
-          echo "- **Total Size**: $(du -sh site | cut -f1)" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
+          {
+            echo "### 📚 Documentation Build Summary"
+            echo ""
+            echo "- **Status**: ✅ Built successfully"
+            echo "- **MkDocs Version**: $(uv run mkdocs --version)"
+            echo "- **Files Generated**: $(find site -type f | wc -l)"
+            echo "- **Total Size**: $(du -sh site | cut -f1)"
+            echo ""
 
-          if [ "${{ github.event_name }}" == "pull_request" ]; then
-            echo "📋 **Note**: This is a PR build. Documentation will be deployed when merged to main." >> $GITHUB_STEP_SUMMARY
-          elif [ "${{ github.ref }}" == "refs/heads/main" ]; then
-            echo "🚀 **Deployment**: Documentation will be deployed to GitHub Pages." >> $GITHUB_STEP_SUMMARY
-          fi
+            if [ "${{ github.event_name }}" == "pull_request" ]; then
+              echo "📋 **Note**: This is a PR build. Documentation will be deployed when merged to main."
+            elif [ "${{ github.ref }}" == "refs/heads/main" ]; then
+              echo "🚀 **Deployment**: Documentation will be deployed to GitHub Pages."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
 
   # Job 5: Deploy to GitHub Pages
   deploy-docs:

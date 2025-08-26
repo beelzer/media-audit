@@ -511,10 +511,10 @@ jobs:
           # Set overall status
           if [ "$all_success" = true ]; then
             echo "## ✅ All checks passed successfully!"
-            echo "ci_status=success" >> $GITHUB_OUTPUT
+            echo "ci_status=success" >> "$GITHUB_OUTPUT"
           else
             echo "## ❌ Some checks failed. Please review the results above."
-            echo "ci_status=failure" >> $GITHUB_OUTPUT
+            echo "ci_status=failure" >> "$GITHUB_OUTPUT"
             exit 1
           fi
 
