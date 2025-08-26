@@ -98,7 +98,7 @@ jobs:
           }' > .markdownlint.json
 
       - name: Run markdownlint
-        run: npx markdownlint docs/**/*.md --fix=false
+        run: npx markdownlint docs/**/*.md
         continue-on-error: ${{ github.event_name == 'pull_request' }}
 
       - name: Comment PR on lint failure
@@ -211,7 +211,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          uv sync --frozen --group docs
+          uv sync --frozen --extra docs
           uv pip list
 
       - name: Build MkDocs documentation
