@@ -1,7 +1,7 @@
 # Media Audit 📺
 
-[![CI Pipeline](https://github.com/beelzer/media-audit/actions/workflows/ci.yml/badge.svg)](https://github.com/beelzer/media-audit/actions/workflows/ci.yml)
-[![Documentation](https://github.com/beelzer/media-audit/actions/workflows/docs.yml/badge.svg)](https://github.com/beelzer/media-audit/actions/workflows/docs.yml)
+[![CI](https://github.com/beelzer/media-audit/actions/workflows/ci.yml/badge.svg)](https://github.com/beelzer/media-audit/actions/workflows/ci.yml)
+[![Docs](https://github.com/beelzer/media-audit/actions/workflows/docs.yml/badge.svg)](https://github.com/beelzer/media-audit/actions/workflows/docs.yml)
 [![Python 3.13+](https://img.shields.io/badge/python-3.13+-blue.svg)](https://www.python.org/downloads/)
 [![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
 [![Checked with mypy](https://img.shields.io/badge/mypy-checked-blue)](http://mypy-lang.org/)
