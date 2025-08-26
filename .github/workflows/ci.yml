@@ -272,22 +272,25 @@ jobs:
   # ============================================================================
 
   test-matrix:
-    name: 🧪 Tests • ${{ matrix.os-name }} • Py${{ matrix.python }}
+    name: 🧪${{ matrix.os-emoji }} ${{ matrix.os-name }} • Py${{ matrix.python }}
     needs: [quality-ruff-lint, quality-ruff-format, quality-mypy]
     strategy:
       fail-fast: false
       matrix:
         include:
           - os: ubuntu-latest
-            os-name: 🐧 Linux
+            os-name: Linux
+            os-emoji: 🐧
             python: '3.13'
             coverage: true
           - os: windows-latest
-            os-name: 🪟 Windows
+            os-name: Windows
+            os-emoji: 🪟
             python: '3.13'
             coverage: false
           - os: macos-latest
-            os-name: 🍎 macOS
+            os-name: macOS
+            os-emoji: 🍎
             python: '3.13'
             coverage: false
     runs-on: ${{ matrix.os }}
