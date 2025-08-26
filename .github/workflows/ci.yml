@@ -73,6 +73,7 @@ jobs:
         with:
           version: ${{ env.UV_VERSION }}
           enable-cache: true
+          cache-dependency-glob: '**/pyproject.toml'
 
       - name: 🔧 Install dependencies
         run: |
@@ -89,12 +90,13 @@ jobs:
           echo "::endgroup::"
 
       - name: 📊 Upload Ruff results
-        if: always()
+        if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: ruff-lint-results
           path: |
             .ruff_cache/
+          if-no-files-found: ignore
           retention-days: 7
 
   quality-ruff-format:
@@ -115,6 +117,7 @@ jobs:
         with:
           version: ${{ env.UV_VERSION }}
           enable-cache: true
+          cache-dependency-glob: '**/pyproject.toml'
 
       - name: 🔧 Install dependencies
         run: uv sync --frozen --all-extras
@@ -143,6 +146,7 @@ jobs:
         with:
           version: ${{ env.UV_VERSION }}
           enable-cache: true
+          cache-dependency-glob: '**/pyproject.toml'
 
       - name: 🔧 Install dependencies
         run: uv sync --frozen --all-extras
@@ -159,11 +163,12 @@ jobs:
           uv run mypy src/ --html-report mypy-report --any-exprs-report mypy-report || true
 
       - name: 📤 Upload mypy report
-        if: always()
+        if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: mypy-html-report
           path: mypy-report/
+          if-no-files-found: ignore
           retention-days: 7
 
   # ============================================================================
@@ -188,6 +193,7 @@ jobs:
         with:
           version: ${{ env.UV_VERSION }}
           enable-cache: true
+          cache-dependency-glob: '**/pyproject.toml'
 
       - name: 🔧 Install dependencies
         run: uv sync --frozen --all-extras
@@ -256,6 +262,7 @@ jobs:
         with:
           version: ${{ env.UV_VERSION }}
           enable-cache: true
+          cache-dependency-glob: '**/pyproject.toml'
 
       - name: 🔧 Install pip-audit
         run: pip install pip-audit
@@ -283,12 +290,12 @@ jobs:
             os-emoji: 🐧
             python: '3.13'
             coverage: true
-          - os: windows-latest
+          - os: windows-2022
             os-name: Windows
             os-emoji: 🪟
             python: '3.13'
             coverage: false
-          - os: macos-latest
+          - os: macos-13
             os-name: macOS
             os-emoji: 🍎
             python: '3.13'
@@ -309,6 +316,7 @@ jobs:
         with:
           version: ${{ env.UV_VERSION }}
           enable-cache: true
+          cache-dependency-glob: '**/pyproject.toml'
 
       - name: 🔧 Install dependencies
         run: uv sync --frozen --all-extras
@@ -382,6 +390,7 @@ jobs:
         with:
           version: ${{ env.UV_VERSION }}
           enable-cache: true
+          cache-dependency-glob: '**/pyproject.toml'
 
       - name: 🏗️ Build package
         run: |
@@ -428,6 +437,7 @@ jobs:
         with:
           version: ${{ env.UV_VERSION }}
           enable-cache: true
+          cache-dependency-glob: '**/pyproject.toml'
 
       - name: 📦 Install dependencies
         run: |
