@@ -41,7 +41,7 @@ Project maintainers are responsible for clarifying standards and will take corre
 ### Before You Contribute
 
 1. **Read the Documentation**: Familiarize yourself with the project by reading:
-   - [README.md](../../README.md)
+   - [Project Overview](../index.md)
    - [Architecture Overview](../architecture/overview.md)
    - [Development Setup](setup.md)
 
