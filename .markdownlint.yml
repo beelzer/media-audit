@@ -1,0 +1,100 @@
+# Markdownlint configuration for media-audit documentation
+# https://github.com/DavidAnson/markdownlint/blob/main/doc/Rules.md
+
+# Default state for all rules
+default: true
+
+# MD003/heading-style - Heading style
+MD003:
+  style: "atx"
+
+# MD004/ul-style - Unordered list style
+MD004:
+  style: "dash"
+
+# MD007/ul-indent - Unordered list indentation
+MD007:
+  indent: 2
+
+# MD013/line-length - Line length
+MD013: false  # Disabled as we allow long lines in documentation
+
+# MD024/no-duplicate-heading - Multiple headings with the same content
+MD024:
+  siblings_only: true  # Allow same heading in different sections
+
+# MD025/single-title/single-h1 - Multiple top-level headings in the same document
+MD025:
+  front_matter_title: ""  # Ignore front matter title
+
+# MD026/no-trailing-punctuation - Trailing punctuation in heading
+MD026:
+  punctuation: ".,;:!。，；：！"  # Remove ? from the default list
+
+# MD029/ol-prefix - Ordered list item prefix
+MD029:
+  style: "ordered"
+
+# MD033/no-inline-html - Inline HTML
+MD033: false  # Allow inline HTML for advanced formatting
+
+# MD035/hr-style - Horizontal rule style
+MD035:
+  style: "---"
+
+# MD036/no-emphasis-as-heading - Emphasis used instead of a heading
+MD036: false  # Sometimes we want to emphasize without making it a heading
+
+# MD040/fenced-code-language - Fenced code blocks should have a language specified
+MD040: true
+
+# MD041/first-line-heading/first-line-h1 - First line in a file should be a top-level heading
+MD041: false  # Not required for all documentation files
+
+# MD042/no-empty-links - No empty links
+MD042: true
+
+# MD044/proper-names - Proper names should have the correct capitalization
+MD044:
+  names:
+    - MkDocs
+    - GitHub
+    - Python
+    - PyPI
+    - FFmpeg
+    - FFprobe
+    - HTML
+    - JSON
+    - YAML
+    - CLI
+    - API
+    - CI/CD
+  code_blocks: false
+  html_elements: false
+
+# MD046/code-block-style - Code block style
+MD046: false  # Allow both fenced and indented code blocks
+
+# MD047/single-trailing-newline - Files should end with a single newline character
+MD047: true
+
+# MD048/code-fence-style - Code fence style
+MD048:
+  style: "backtick"
+
+# MD049/emphasis-style - Emphasis style should be consistent
+MD049:
+  style: "asterisk"
+
+# MD050/strong-style - Strong style should be consistent
+MD050:
+  style: "asterisk"
+
+# MD051/link-fragments - Link fragments should be valid
+MD051: true
+
+# MD052/reference-links-images - Reference links and images should use a label that is defined
+MD052: true
+
+# MD053/link-image-reference-definitions - Link and image reference definitions should be needed
+MD053: true

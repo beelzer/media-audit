@@ -1,0 +1,462 @@
+name: Documentation
+
+on:
+  # Trigger on pushes to main branch
+  push:
+    branches:
+      - main
+    paths:
+      - 'docs/**'
+      - 'mkdocs.yml'
+      - 'src/**/*.py'  # Rebuild docs when source code changes (for API docs)
+      - '.github/workflows/docs.yml'
+      - 'pyproject.toml'  # In case doc dependencies change
+
+  # Trigger on pull requests
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'docs/**'
+      - 'mkdocs.yml'
+      - 'src/**/*.py'
+      - '.github/workflows/docs.yml'
+      - 'pyproject.toml'
+
+  # Allow manual trigger
+  workflow_dispatch:
+    inputs:
+      deploy:
+        description: 'Deploy to GitHub Pages (only works on main branch)'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+
+# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
+# However, do NOT cancel in-progress runs as we want to allow these production deployments to complete.
+concurrency:
+  group: "pages-${{ github.ref }}"
+  cancel-in-progress: false
+
+env:
+  PYTHON_VERSION: '3.13'
+  UV_CACHE_DIR: .uv-cache
+
+jobs:
+  # Job 1: Markdown Linting
+  markdown-lint:
+    name: Lint Markdown Files
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for better git operations
+
+      - name: Set up Node.js for markdownlint
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: '**/package-lock.json'
+
+      - name: Create package.json for markdownlint if not exists
+        run: |
+          if [ ! -f package.json ]; then
+            echo '{
+              "name": "media-audit-docs",
+              "version": "1.0.0",
+              "description": "Documentation linting for media-audit",
+              "devDependencies": {
+                "markdownlint-cli": "^0.41.0"
+              }
+            }' > package.json
+          fi
+
+      - name: Install markdownlint
+        run: npm install --save-dev markdownlint-cli
+
+      - name: Create markdownlint configuration
+        run: |
+          echo '{
+            "default": true,
+            "MD013": false,
+            "MD033": false,
+            "MD041": false,
+            "MD024": { "siblings_only": true },
+            "MD025": { "front_matter_title": "" },
+            "MD046": false,
+            "no-hard-tabs": false,
+            "line-length": false
+          }' > .markdownlint.json
+
+      - name: Run markdownlint
+        run: npx markdownlint docs/**/*.md --fix=false
+        continue-on-error: ${{ github.event_name == 'pull_request' }}
+
+      - name: Comment PR on lint failure
+        if: failure() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '⚠️ Markdown linting failed. Please run `npx markdownlint docs/**/*.md --fix` locally to fix issues.'
+            })
+
+  # Job 2: Spell Checking
+  spell-check:
+    name: Check Spelling
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Create cspell configuration
+        run: |
+          echo '{
+            "version": "0.2",
+            "language": "en",
+            "words": [
+              "mkdocs",
+              "mkdocstrings",
+              "pymdownx",
+              "superfences",
+              "admonition",
+              "mermaid",
+              "fontawesome",
+              "twemoji",
+              "linenums",
+              "pygments",
+              "tasklist",
+              "arithmatex",
+              "betterem",
+              "inlinehilite",
+              "smartsymbols",
+              "tabbed",
+              "ffmpeg",
+              "ffprobe",
+              "codec",
+              "codecs",
+              "bitrate",
+              "framerate",
+              "remux",
+              "transcode",
+              "plex",
+              "jellyfin",
+              "emby",
+              "kodi",
+              "sonarr",
+              "radarr",
+              "nzbget",
+              "sabnzbd",
+              "deluge",
+              "qbittorrent",
+              "uv",
+              "ruff",
+              "mypy",
+              "pytest",
+              "pydantic",
+              "jinja",
+              "asyncio",
+              "beelzer",
+              "media-audit",
+              "mediainfo"
+            ],
+            "ignorePaths": [
+              "**/*.min.js",
+              "**/*.min.css",
+              "**/vendor/**",
+              "**/node_modules/**",
+              "**/.git/**",
+              "**/uv.lock",
+              "**/*.svg",
+              "**/*.png",
+              "**/*.jpg",
+              "**/*.jpeg",
+              "**/*.gif",
+              "**/*.ico",
+              "**/site/**"
+            ],
+            "dictionaries": ["en-us"],
+            "import": ["node_modules/cspell-dict-python/dict/python.txt"]
+          }' > cspell.json
+
+      - name: Run cspell
+        uses: streetsidesoftware/cspell-action@v6
+        with:
+          files: |
+            docs/**/*.md
+            README.md
+          config: ./cspell.json
+          strict: false  # Don't fail the build on spelling errors
+          incremental_files_only: ${{ github.event_name == 'pull_request' }}
+
+  # Job 3: Markdown Format Validation
+  markdown-format:
+    name: Validate Markdown Formatting
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check for broken links in Markdown
+        uses: gaurav-nelson/github-action-markdown-link-check@v1
+        with:
+          folder-path: 'docs'
+          file-extension: '.md'
+          check-modified-files-only: ${{ github.event_name == 'pull_request' && 'yes' || 'no' }}
+          use-quiet-mode: 'yes'
+          use-verbose-mode: 'no'
+          config-file: |
+            {
+              "ignorePatterns": [
+                {
+                  "pattern": "^http://localhost"
+                },
+                {
+                  "pattern": "^https://localhost"
+                }
+              ],
+              "timeout": "20s",
+              "retryOn429": true,
+              "retryCount": 3,
+              "aliveStatusCodes": [200, 206, 301, 302, 303]
+            }
+          max-depth: 3
+
+      - name: Validate frontmatter in Markdown files
+        run: |
+          # Check for proper YAML frontmatter where expected
+          for file in docs/**/*.md; do
+            if [ -f "$file" ]; then
+              # Check if file starts with ---
+              if head -n 1 "$file" | grep -q "^---$"; then
+                # Validate YAML frontmatter
+                awk '/^---$/{p++;next} p==1{print}' "$file" | python3 -c "import yaml, sys; yaml.safe_load(sys.stdin)" || {
+                  echo "Invalid YAML frontmatter in $file"
+                  exit 1
+                }
+              fi
+            fi
+          done
+
+  # Job 4: Build Documentation
+  build-docs:
+    name: Build Documentation
+    runs-on: ubuntu-latest
+    needs: [markdown-lint, spell-check, markdown-format]
+    if: always() && !cancelled()
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for git info in docs
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+          cache-dependency-glob: |
+            **/pyproject.toml
+            **/uv.lock
+
+      - name: Set up Python
+        run: uv python install ${{ env.PYTHON_VERSION }}
+
+      - name: Restore uv cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.UV_CACHE_DIR }}
+          key: uv-${{ runner.os }}-${{ hashFiles('**/uv.lock') }}
+          restore-keys: |
+            uv-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: |
+          uv sync --frozen --group docs
+          uv pip list
+
+      - name: Build MkDocs documentation
+        run: |
+          uv run mkdocs build --strict --verbose
+        env:
+          PYTHONUNBUFFERED: "1"
+
+      - name: Check for broken internal links
+        run: |
+          # Use Python's http.server to serve the site and check links
+          uv run python -m http.server 8000 --directory site &
+          SERVER_PID=$!
+          sleep 5  # Give server time to start
+          
+          # Check if server started successfully
+          if ! curl -s -o /dev/null -w "%{http_code}" http://localhost:8000 | grep -q "200"; then
+            echo "Failed to start documentation server"
+            kill $SERVER_PID 2>/dev/null
+            exit 1
+          fi
+          
+          echo "Documentation server started successfully"
+          kill $SERVER_PID
+
+      - name: Upload documentation artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: documentation-site
+          path: site/
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Add build summary
+        run: |
+          echo "### 📚 Documentation Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status**: ✅ Built successfully" >> $GITHUB_STEP_SUMMARY
+          echo "- **MkDocs Version**: $(uv run mkdocs --version)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Files Generated**: $(find site -type f | wc -l)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Total Size**: $(du -sh site | cut -f1)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            echo "📋 **Note**: This is a PR build. Documentation will be deployed when merged to main." >> $GITHUB_STEP_SUMMARY
+          elif [ "${{ github.ref }}" == "refs/heads/main" ]; then
+            echo "🚀 **Deployment**: Documentation will be deployed to GitHub Pages." >> $GITHUB_STEP_SUMMARY
+          fi
+
+  # Job 5: Deploy to GitHub Pages
+  deploy-docs:
+    name: Deploy to GitHub Pages
+    runs-on: ubuntu-latest
+    needs: build-docs
+    # Only deploy on push to main or manual trigger with deploy=true
+    if: |
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.deploy == 'true' && github.ref == 'refs/heads/main')
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download documentation artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: documentation-site
+          path: ./site
+
+      - name: Setup GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload to GitHub Pages
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+      - name: Add deployment summary
+        run: |
+          echo "### 🚀 GitHub Pages Deployment" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status**: ✅ Deployed successfully" >> $GITHUB_STEP_SUMMARY
+          echo "- **URL**: ${{ steps.deployment.outputs.page_url }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Deployment ID**: ${{ steps.deployment.outputs.deployment_id }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Time**: $(date -u +"%Y-%m-%d %H:%M:%S UTC")" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "📖 Visit the [documentation](${{ steps.deployment.outputs.page_url }}) to see the changes." >> $GITHUB_STEP_SUMMARY
+
+      - name: Comment on PR after deployment
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const url = '${{ steps.deployment.outputs.page_url }}';
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `### 📚 Documentation Preview\n\nThe documentation has been successfully built and can be previewed.\n\n🔗 **Preview URL**: ${url}\n\n*Note: This preview will be updated when this PR is merged.*`
+            });
+
+  # Job 6: PR Status Check
+  pr-status:
+    name: Documentation PR Status
+    runs-on: ubuntu-latest
+    needs: [markdown-lint, spell-check, markdown-format, build-docs]
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Set PR status check
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const lintStatus = '${{ needs.markdown-lint.result }}';
+            const spellStatus = '${{ needs.spell-check.result }}';
+            const formatStatus = '${{ needs.markdown-format.result }}';
+            const buildStatus = '${{ needs.build-docs.result }}';
+            
+            let message = '### 📋 Documentation Check Results\n\n';
+            let allPassed = true;
+            
+            // Check each job status
+            const checks = [
+              { name: 'Markdown Linting', status: lintStatus },
+              { name: 'Spell Check', status: spellStatus },
+              { name: 'Format Validation', status: formatStatus },
+              { name: 'Documentation Build', status: buildStatus }
+            ];
+            
+            checks.forEach(check => {
+              const icon = check.status === 'success' ? '✅' : check.status === 'failure' ? '❌' : '⚠️';
+              message += `- ${icon} **${check.name}**: ${check.status}\n`;
+              if (check.status !== 'success') allPassed = false;
+            });
+            
+            message += '\n';
+            
+            if (allPassed) {
+              message += '🎉 **All documentation checks passed!** This PR is ready for review.';
+            } else {
+              message += '⚠️ **Some checks did not pass.** Please review the job logs for details.';
+            }
+            
+            // Find existing comment or create new one
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            
+            const botComment = comments.find(comment => 
+              comment.user.type === 'Bot' && comment.body.includes('Documentation Check Results')
+            );
+            
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: message
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: message
+              });
+            }

@@ -1,0 +1,70 @@
+# Media Audit Configuration Example
+
+scan:
+  # Root directories to scan
+  root_paths:
+    - D:/Media/Movies
+    - D:/Media/TV Shows
+    - E:/Backup/Media
+
+  # Media server profiles to use (plex, jellyfin, emby, all)
+  profiles:
+    - plex
+    - jellyfin
+
+  # Allowed video codecs (hevc, h265, av1, h264, vp9, etc.)
+  allowed_codecs:
+    - hevc
+    - h265
+    - av1
+
+  # Include/exclude patterns (glob patterns)
+  include_patterns: []
+  exclude_patterns:
+    - "*.sample.*"
+    - "**/Extras/**"
+    - "**/Behind The Scenes/**"
+
+  # Number of concurrent workers for scanning
+  concurrent_workers: 4
+
+  # Enable caching for faster subsequent scans
+  cache_enabled: true
+
+  # Custom cache directory (optional, defaults to ~/.cache/media-audit)
+  # cache_dir: /tmp/media-audit-cache
+
+report:
+  # HTML report output path
+  output_path: media-audit-report.html
+
+  # JSON report output path (for automation/integration)
+  json_path: media-audit-report.json
+
+  # Automatically open HTML report in browser
+  auto_open: true
+
+  # Show thumbnail images in report (if available)
+  show_thumbnails: true
+
+  # Only show items with problems in report
+  problems_only: false
+
+# Custom pattern definitions (optional)
+# Uncomment to override default patterns
+# patterns:
+#   poster_patterns:
+#     - "^poster\\."
+#     - "^folder\\."
+#     - "^cover\\."
+#   background_patterns:
+#     - "^fanart\\."
+#     - "^background\\."
+#     - "^backdrop\\."
+#   banner_patterns:
+#     - "^banner\\."
+#   trailer_patterns:
+#     - "-trailer\\."
+#     - "^trailers/.*"
+#   title_card_patterns:
+#     - "^S\\d{2}E\\d{2}\\."

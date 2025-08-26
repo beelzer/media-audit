@@ -1,0 +1,308 @@
+"""Command-line interface for media-audit."""
+
+from __future__ import annotations
+
+import sys
+import webbrowser
+from pathlib import Path
+from typing import Optional
+
+import click
+from rich.console import Console
+from rich.table import Table
+from rich import print as rprint
+
+from .config import Config, ScanConfig, ReportConfig
+from .scanner import MediaScanner
+from .report import HTMLReportGenerator, JSONReportGenerator
+from .models import ValidationStatus
+
+
+console = Console()
+
+
+@click.group(invoke_without_command=True)
+@click.pass_context
+@click.version_option()
+def cli(ctx):
+    """Media Audit - Scan and validate your media library."""
+    if ctx.invoked_subcommand is None:
+        ctx.invoke(scan)
+
+
+@cli.command()
+@click.option(
+    "--roots",
+    "-r",
+    multiple=True,
+    help="Root directories to scan (can specify multiple)",
+)
+@click.option(
+    "--profiles",
+    "-p",
+    multiple=True,
+    default=["all"],
+    help="Media server profiles to use (plex, jellyfin, emby, all)",
+)
+@click.option(
+    "--report",
+    "-o",
+    type=click.Path(path_type=Path),
+    help="Output HTML report path",
+)
+@click.option(
+    "--json",
+    "-j",
+    type=click.Path(path_type=Path),
+    help="Output JSON report path",
+)
+@click.option(
+    "--open",
+    "-O",
+    is_flag=True,
+    help="Open HTML report in browser after generation",
+)
+@click.option(
+    "--allow-codecs",
+    multiple=True,
+    help="Allowed video codecs (default: hevc, h265, av1)",
+)
+@click.option(
+    "--include",
+    multiple=True,
+    help="Include patterns for scanning",
+)
+@click.option(
+    "--exclude",
+    multiple=True,
+    help="Exclude patterns for scanning",
+)
+@click.option(
+    "--patterns",
+    type=click.Path(exists=True, path_type=Path),
+    help="Custom patterns YAML file",
+)
+@click.option(
+    "--config",
+    "-c",
+    type=click.Path(exists=True, path_type=Path),
+    help="Configuration file path",
+)
+@click.option(
+    "--workers",
+    "-w",
+    type=int,
+    default=4,
+    help="Number of concurrent workers",
+)
+@click.option(
+    "--no-cache",
+    is_flag=True,
+    help="Disable caching",
+)
+@click.option(
+    "--problems-only",
+    is_flag=True,
+    help="Show only items with problems in report",
+)
+def scan(
+    roots: tuple[str],
+    profiles: tuple[str],
+    report: Path | None,
+    json: Path | None,
+    open: bool,
+    allow_codecs: tuple[str],
+    include: tuple[str],
+    exclude: tuple[str],
+    patterns: Path | None,
+    config: Path | None,
+    workers: int,
+    no_cache: bool,
+    problems_only: bool,
+):
+    """Scan media libraries and generate reports."""
+    
+    # Load configuration
+    if config:
+        cfg = Config.from_file(config)
+    else:
+        cfg = Config()
+
+    # Override with command-line options
+    if roots:
+        cfg.scan.root_paths = [Path(r) for r in roots]
+    
+    if not cfg.scan.root_paths:
+        console.print("[red]Error:[/red] No root paths specified. Use --roots or provide a config file.")
+        sys.exit(1)
+
+    if profiles and profiles != ("all",):
+        cfg.scan.profiles = list(profiles)
+
+    if allow_codecs:
+        from .models import CodecType
+        cfg.scan.allowed_codecs = []
+        for codec in allow_codecs:
+            try:
+                cfg.scan.allowed_codecs.append(CodecType[codec.upper()])
+            except KeyError:
+                console.print(f"[yellow]Warning:[/yellow] Unknown codec '{codec}', skipping")
+
+    if include:
+        cfg.scan.include_patterns = list(include)
+
+    if exclude:
+        cfg.scan.exclude_patterns = list(exclude)
+
+    if workers:
+        cfg.scan.concurrent_workers = workers
+
+    if no_cache:
+        cfg.scan.cache_enabled = False
+
+    if report:
+        cfg.report.output_path = report
+
+    if json:
+        cfg.report.json_path = json
+
+    if open:
+        cfg.report.auto_open = open
+
+    if problems_only:
+        cfg.report.problems_only = problems_only
+
+    # Load custom patterns if provided
+    if patterns:
+        import yaml
+        with open(patterns) as f:
+            pattern_data = yaml.safe_load(f)
+            from .patterns import MediaPatterns
+            cfg.scan.patterns = MediaPatterns(**pattern_data)
+
+    # Start scanning
+    console.print(f"\n[bold cyan]📺 Media Audit Scanner[/bold cyan]\n")
+    console.print(f"[dim]Scanning {len(cfg.scan.root_paths)} root path(s)...[/dim]\n")
+
+    scanner = MediaScanner(cfg.scan)
+    result = scanner.scan()
+
+    # Display results summary
+    _display_summary(result)
+
+    # Generate reports
+    if cfg.report.output_path:
+        console.print(f"\n[cyan]Generating HTML report:[/cyan] {cfg.report.output_path}")
+        html_gen = HTMLReportGenerator()
+        html_gen.generate(result, cfg.report.output_path, cfg.report.problems_only)
+        
+        if cfg.report.auto_open:
+            webbrowser.open(cfg.report.output_path.as_uri())
+
+    if cfg.report.json_path:
+        console.print(f"[cyan]Generating JSON report:[/cyan] {cfg.report.json_path}")
+        json_gen = JSONReportGenerator()
+        json_gen.generate(result, cfg.report.json_path)
+
+    # Exit with error code if issues found
+    if result.total_issues > 0:
+        sys.exit(1)
+
+
+@cli.command()
+@click.argument("output", type=click.Path(path_type=Path))
+def init_config(output: Path):
+    """Generate a sample configuration file."""
+    sample_config = Config(
+        scan=ScanConfig(
+            root_paths=[Path("D:/Media"), Path("E:/Media")],
+            profiles=["plex", "jellyfin"],
+            concurrent_workers=4,
+            cache_enabled=True,
+        ),
+        report=ReportConfig(
+            output_path=Path("report.html"),
+            json_path=Path("report.json"),
+            auto_open=True,
+            show_thumbnails=True,
+            problems_only=False,
+        ),
+    )
+
+    sample_config.save(output)
+    console.print(f"[green]✓[/green] Created sample configuration at {output}")
+    console.print("\n[dim]Edit this file to customize your scan settings.[/dim]")
+
+
+def _display_summary(result):
+    """Display scan results summary."""
+    # Create summary table
+    table = Table(title="Scan Summary", show_header=True, header_style="bold cyan")
+    table.add_column("Category", style="dim")
+    table.add_column("Count", justify="right")
+    
+    table.add_row("Total Items", str(result.total_items))
+    table.add_row("Movies", str(len(result.movies)))
+    table.add_row("TV Series", str(len(result.series)))
+    table.add_row("Total Issues", str(result.total_issues))
+    
+    # Count by severity
+    error_count = 0
+    warning_count = 0
+    
+    for movie in result.movies:
+        for issue in movie.issues:
+            if issue.severity == ValidationStatus.ERROR:
+                error_count += 1
+            elif issue.severity == ValidationStatus.WARNING:
+                warning_count += 1
+
+    for series in result.series:
+        for issue in series.issues:
+            if issue.severity == ValidationStatus.ERROR:
+                error_count += 1
+            elif issue.severity == ValidationStatus.WARNING:
+                warning_count += 1
+        
+        for season in series.seasons:
+            for issue in season.issues:
+                if issue.severity == ValidationStatus.ERROR:
+                    error_count += 1
+                elif issue.severity == ValidationStatus.WARNING:
+                    warning_count += 1
+            
+            for episode in season.episodes:
+                for issue in episode.issues:
+                    if issue.severity == ValidationStatus.ERROR:
+                        error_count += 1
+                    elif issue.severity == ValidationStatus.WARNING:
+                        warning_count += 1
+
+    table.add_row("[red]Errors[/red]", f"[red]{error_count}[/red]")
+    table.add_row("[yellow]Warnings[/yellow]", f"[yellow]{warning_count}[/yellow]")
+    table.add_row("Scan Duration", f"{result.duration:.2f}s")
+    
+    console.print(table)
+
+    # Show sample issues
+    if result.total_issues > 0:
+        console.print("\n[bold]Sample Issues Found:[/bold]")
+        
+        items_with_issues = result.get_items_with_issues()[:5]  # Show first 5
+        for item in items_with_issues:
+            console.print(f"\n[cyan]{item.name}[/cyan] ({item.path})")
+            for issue in item.issues[:3]:  # Show first 3 issues per item
+                severity_color = "red" if issue.severity == ValidationStatus.ERROR else "yellow"
+                console.print(f"  [{severity_color}]▸[/{severity_color}] {issue.message}")
+
+        if result.total_issues > 5:
+            console.print(f"\n[dim]... and {result.total_issues - 5} more issues[/dim]")
+
+
+def main():
+    """Main entry point."""
+    cli()
+
+
+if __name__ == "__main__":
+    main()
