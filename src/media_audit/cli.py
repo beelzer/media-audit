@@ -7,8 +7,8 @@ import webbrowser
 from pathlib import Path
 
 import click
-from rich.console import Console  # type: ignore[import-not-found]
-from rich.table import Table  # type: ignore[import-not-found]
+from rich.console import Console
+from rich.table import Table
 
 from .config import Config, ReportConfig, ScanConfig
 from .models import ScanResult, ValidationStatus

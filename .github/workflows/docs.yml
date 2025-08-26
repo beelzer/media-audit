@@ -300,14 +300,14 @@ jobs:
           uv run python -m http.server 8000 --directory site &
           SERVER_PID=$!
           sleep 5  # Give server time to start
-          
+
           # Check if server started successfully
           if ! curl -s -o /dev/null -w "%{http_code}" http://localhost:8000 | grep -q "200"; then
             echo "Failed to start documentation server"
             kill $SERVER_PID 2>/dev/null
             exit 1
           fi
-          
+
           echo "Documentation server started successfully"
           kill $SERVER_PID
 
@@ -328,7 +328,7 @@ jobs:
           echo "- **Files Generated**: $(find site -type f | wc -l)" >> $GITHUB_STEP_SUMMARY
           echo "- **Total Size**: $(du -sh site | cut -f1)" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          
+
           if [ "${{ github.event_name }}" == "pull_request" ]; then
             echo "📋 **Note**: This is a PR build. Documentation will be deployed when merged to main." >> $GITHUB_STEP_SUMMARY
           elif [ "${{ github.ref }}" == "refs/heads/main" ]; then
@@ -371,14 +371,13 @@ jobs:
 
       - name: Add deployment summary
         run: |
-          echo "### 🚀 GitHub Pages Deployment" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "- **Status**: ✅ Deployed successfully" >> $GITHUB_STEP_SUMMARY
-          echo "- **URL**: ${{ steps.deployment.outputs.page_url }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Deployment ID**: ${{ steps.deployment.outputs.deployment_id }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Time**: $(date -u +"%Y-%m-%d %H:%M:%S UTC")" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "📖 Visit the [documentation](${{ steps.deployment.outputs.page_url }}) to see the changes." >> $GITHUB_STEP_SUMMARY
+          echo "### 🚀 GitHub Pages Deployment" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Status**: ✅ Deployed successfully" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **URL**: ${{ steps.deployment.outputs.page_url }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Time**: $(date -u +"%Y-%m-%d %H:%M:%S UTC")" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "📖 Visit the [documentation](${{ steps.deployment.outputs.page_url }}) to see the changes." >> "$GITHUB_STEP_SUMMARY"
 
       - name: Comment on PR after deployment
         if: github.event_name == 'pull_request'
@@ -408,10 +407,10 @@ jobs:
             const spellStatus = '${{ needs.spell-check.result }}';
             const formatStatus = '${{ needs.markdown-format.result }}';
             const buildStatus = '${{ needs.build-docs.result }}';
-            
+
             let message = '### 📋 Documentation Check Results\n\n';
             let allPassed = true;
-            
+
             // Check each job status
             const checks = [
               { name: 'Markdown Linting', status: lintStatus },
@@ -419,32 +418,32 @@ jobs:
               { name: 'Format Validation', status: formatStatus },
               { name: 'Documentation Build', status: buildStatus }
             ];
-            
+
             checks.forEach(check => {
               const icon = check.status === 'success' ? '✅' : check.status === 'failure' ? '❌' : '⚠️';
               message += `- ${icon} **${check.name}**: ${check.status}\n`;
               if (check.status !== 'success') allPassed = false;
             });
-            
+
             message += '\n';
-            
+
             if (allPassed) {
               message += '🎉 **All documentation checks passed!** This PR is ready for review.';
             } else {
               message += '⚠️ **Some checks did not pass.** Please review the job logs for details.';
             }
-            
+
             // Find existing comment or create new one
             const { data: comments } = await github.rest.issues.listComments({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.issue.number,
             });
-            
-            const botComment = comments.find(comment => 
+
+            const botComment = comments.find(comment =>
               comment.user.type === 'Bot' && comment.body.includes('Documentation Check Results')
             );
-            
+
             if (botComment) {
               await github.rest.issues.updateComment({
                 owner: context.repo.owner,

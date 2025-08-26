@@ -10,8 +10,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from rich.console import Console  # type: ignore[import-not-found]
-from rich.progress import (  # type: ignore[import-not-found]
+from rich.console import Console
+from rich.progress import (
     Progress,
     SpinnerColumn,
     TextColumn,

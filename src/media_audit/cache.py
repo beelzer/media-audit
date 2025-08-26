@@ -105,7 +105,7 @@ class MediaCache:
                 stored_version = version_file.read_text().strip()
                 if stored_version != self.schema_version:
                     # Schema has changed, clear the cache
-                    from rich.console import Console  # type: ignore[import-not-found]
+                    from rich.console import Console
 
                     console = Console()
                     console.print(
