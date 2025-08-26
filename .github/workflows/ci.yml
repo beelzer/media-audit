@@ -315,6 +315,7 @@ jobs:
 
       - name: 🧪 Run tests with coverage
         if: matrix.coverage
+        shell: bash
         run: |
           echo "::group::Test execution with coverage"
           uv run pytest tests/ \
@@ -328,6 +329,7 @@ jobs:
 
       - name: 🧪 Run tests without coverage
         if: '!matrix.coverage'
+        shell: bash
         run: |
           echo "::group::Test execution"
           uv run pytest tests/ \
