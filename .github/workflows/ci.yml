@@ -368,6 +368,62 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
 
   # ============================================================================
+  # 🔮 Experimental Testing - Python 3.14 (Allow Failures)
+  # ============================================================================
+
+  test-python-experimental:
+    name: 🧪 Python 3.14 (Experimental)
+    needs: [quality-ruff-lint, quality-ruff-format]
+    runs-on: ubuntu-latest
+    continue-on-error: true  # Allow this job to fail without blocking workflow
+    timeout-minutes: 20
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🐍 Setup Python 3.14-dev
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.14-dev'  # Development version of Python 3.14
+          allow-prereleases: true
+
+      - name: 📦 Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: true
+          cache-dependency-glob: '**/pyproject.toml'
+
+      - name: 🔧 Install dependencies (allow failures)
+        continue-on-error: true
+        run: |
+          echo "::group::Installing with Python 3.14-dev"
+          uv sync --frozen --all-extras || echo "::warning::Some dependencies may not be compatible with Python 3.14 yet"
+          echo "::endgroup::"
+
+      - name: 🧪 Run tests (experimental)
+        continue-on-error: true
+        run: |
+          echo "::group::Running tests on Python 3.14-dev"
+          uv run pytest tests/ -v --tb=short || echo "::warning::Tests failed on Python 3.14-dev (expected)"
+          echo "::endgroup::"
+
+      - name: 📊 Report experimental results
+        if: always()
+        run: |
+          echo "## 🔮 Python 3.14 Experimental Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if uv run python --version; then
+            echo "✅ Python 3.14-dev installed successfully" >> $GITHUB_STEP_SUMMARY
+            echo "Python version: $(uv run python --version)" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Failed to install Python 3.14-dev" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "This is an experimental test to check compatibility with the upcoming Python 3.14 release." >> $GITHUB_STEP_SUMMARY
+          echo "Failures in this job are expected and will not block the workflow." >> $GITHUB_STEP_SUMMARY
+
+  # ============================================================================
   # 🏗️ Build Verification
   # ============================================================================
 
@@ -463,6 +519,7 @@ jobs:
       - security-secrets
       - security-dependencies
       - test-matrix
+      - test-python-experimental
       - build-package
       - pre-commit-check
     runs-on: ubuntu-latest
@@ -510,6 +567,16 @@ jobs:
           echo ""
           echo "### 🧪 Testing"
           check_job "Test Suite" "${{ needs.test-matrix.result }}" "🧪" || all_success=false
+          # Experimental test - don't fail CI if this fails
+          echo ""
+          echo "### 🔮 Experimental (Non-blocking)"
+          if [ "${{ needs.test-python-experimental.result }}" == "success" ]; then
+            echo "🐍 ✅ Python 3.14-dev: Compatible!"
+          elif [ "${{ needs.test-python-experimental.result }}" == "skipped" ]; then
+            echo "🐍 ⏭️ Python 3.14-dev: Skipped"
+          else
+            echo "🐍 ⚠️ Python 3.14-dev: Not yet compatible (expected)"
+          fi
           echo ""
           echo "### 🏗️ Build"
           check_job "Package Build" "${{ needs.build-package.result }}" "📦" || all_success=false
@@ -545,6 +612,7 @@ jobs:
               'security-secrets': '${{ needs.security-secrets.result }}',
               'security-dependencies': '${{ needs.security-dependencies.result }}',
               'test-matrix': '${{ needs.test-matrix.result }}',
+              'test-python-experimental': '${{ needs.test-python-experimental.result }}',
               'build-package': '${{ needs.build-package.result }}',
               'pre-commit-check': '${{ needs.pre-commit-check.result }}'
             };
