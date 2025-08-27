@@ -54,7 +54,7 @@ jobs:
   # ============================================================================
 
   quality-ruff-lint:
-    name: 🎨 Ruff Linting
+    name: 🎯 Quality • Ruff Linting
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -100,7 +100,7 @@ jobs:
           retention-days: 7
 
   quality-ruff-format:
-    name: 🖌️ Ruff Formatting
+    name: 🎯 Quality • Ruff Formatting
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -129,7 +129,7 @@ jobs:
           echo "::endgroup::"
 
   quality-mypy:
-    name: 🔍 Type Checking
+    name: 🎯 Quality • Type Checking
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -176,7 +176,7 @@ jobs:
   # ============================================================================
 
   security-bandit:
-    name: 🔒 Security Analysis
+    name: 🛡️ Security • Bandit Analysis
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -214,7 +214,7 @@ jobs:
           retention-days: 30
 
   security-secrets:
-    name: 🔐 Secrets Detection
+    name: 🛡️ Security • Secrets Detection
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -245,7 +245,7 @@ jobs:
           echo "::endgroup::"
 
   security-dependencies:
-    name: 🛡️ Dependency Audit
+    name: 🛡️ Security • Dependency Audit
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -409,7 +409,7 @@ jobs:
   # ============================================================================
 
   build-package:
-    name: 📦 Build Distribution
+    name: 🏗️ Build • Distribution Package
     needs: [quality-ruff-lint, quality-ruff-format, quality-mypy]
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -457,7 +457,7 @@ jobs:
   # ============================================================================
 
   pre-commit-check:
-    name: 🪝 Pre-commit Hooks
+    name: 🪝 Validation • Pre-commit Hooks
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
