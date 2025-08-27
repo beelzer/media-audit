@@ -9,7 +9,7 @@ This reference documents the FFprobe integration system for analyzing video file
 Main function for analyzing video files using FFprobe.
 
 ```python
-from media_audit.probe import probe_video
+from media_audit.infrastructure.probe import probe_video
 from pathlib import Path
 
 def probe_video(
@@ -55,7 +55,7 @@ Returns a `VideoInfo` object containing:
 
 ```python
 from pathlib import Path
-from media_audit.probe import probe_video
+from media_audit.infrastructure.probe import probe_video
 
 # Basic video probing
 video_path = Path("/movies/The Matrix (1999)/The Matrix (1999).mkv")
@@ -68,7 +68,7 @@ print(f"Bitrate: {video_info.bitrate / 1_000_000:.1f} Mbps")
 print(f"File size: {video_info.size / 1024**3:.2f} GB")
 
 # With caching
-from media_audit.cache import MediaCache
+from media_audit.infrastructure.cache import MediaCache
 
 cache = MediaCache()
 video_info = probe_video(video_path, cache=cache)
@@ -235,7 +235,7 @@ class UnsupportedFormatError(ProbeError):
 ### Error Handling Examples
 
 ```python
-from media_audit.probe import probe_video, ProbeError, FFprobeNotFoundError
+from media_audit.infrastructure.probe import probe_video, ProbeError, FFprobeNotFoundError
 
 try:
     video_info = probe_video(video_path)

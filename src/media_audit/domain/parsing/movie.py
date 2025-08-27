@@ -6,8 +6,8 @@ import re
 from pathlib import Path
 from typing import Any
 
-from media_audit.logging import get_logger
-from media_audit.models import MediaType, MovieItem, VideoInfo
+from media_audit.core import MediaType, MovieItem, VideoInfo
+from media_audit.shared.logging import get_logger
 
 from .base import BaseParser
 

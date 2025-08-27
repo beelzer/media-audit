@@ -5,8 +5,7 @@ from unittest.mock import patch
 
 import pytest
 
-from media_audit.config import ScanConfig
-from media_audit.models import (
+from media_audit.core import (
     CodecType,
     EpisodeItem,
     MediaType,
@@ -16,7 +15,8 @@ from media_audit.models import (
     ValidationStatus,
     VideoInfo,
 )
-from media_audit.validator import MediaValidator
+from media_audit.domain.validation import MediaValidator
+from media_audit.infrastructure.config import ScanConfig
 
 
 @pytest.fixture
@@ -138,7 +138,6 @@ def test_validate_series_structure(validator):
 
     season.episodes.append(episode)
     series.seasons.append(season)
-    series.update_episode_count()
 
     validator.validate_series(series)
 

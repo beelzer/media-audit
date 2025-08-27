@@ -276,7 +276,7 @@ Enable verbose logging to see pattern matching:
 
 ```python
 # Custom script for pattern testing
-from media_audit.patterns import get_patterns
+from media_audit.domain.patterns import get_patterns
 import re
 
 # Load patterns

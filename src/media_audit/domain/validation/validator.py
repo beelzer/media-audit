@@ -11,8 +11,8 @@ Validation Categories:
     - Metadata: Missing or incorrect metadata
 
 Example:
-    >>> from media_audit.validator import MediaValidator
-    >>> from media_audit.config import ScanConfig
+    >>> from media_audit.domain.validation import MediaValidator
+    >>> from media_audit.infrastructure.config import ScanConfig
     >>>
     >>> config = ScanConfig(allowed_codecs=[CodecType.HEVC, CodecType.AV1])
     >>> validator = MediaValidator(config)
@@ -24,11 +24,8 @@ Example:
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
 
-from .config import ScanConfig
-from .logging import get_logger
-from .models import (
+from media_audit.core import (
     CodecType,
     EpisodeItem,
     MediaItem,
@@ -39,7 +36,10 @@ from .models import (
     ValidationStatus,
     VideoInfo,
 )
-from .probe import probe_video
+from media_audit.infrastructure.cache import MediaCache
+from media_audit.infrastructure.config import ScanConfig
+from media_audit.infrastructure.probe import probe_video
+from media_audit.shared.logging import get_logger
 
 
 class MediaValidator:
@@ -56,7 +56,7 @@ class MediaValidator:
 
     """
 
-    def __init__(self, config: ScanConfig, cache: Any = None) -> None:
+    def __init__(self, config: ScanConfig, cache: MediaCache | None = None) -> None:
         """Initialize validator with configuration.
 
         Args:

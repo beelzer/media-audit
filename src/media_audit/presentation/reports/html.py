@@ -8,8 +8,8 @@ from typing import Any
 
 from jinja2 import Template
 
-from media_audit.logging import get_logger
-from media_audit.models import ScanResult, ValidationStatus
+from media_audit.core import ScanResult, ValidationStatus
+from media_audit.shared import get_logger
 
 HTML_TEMPLATE = """<!DOCTYPE html>
 <html lang="en">

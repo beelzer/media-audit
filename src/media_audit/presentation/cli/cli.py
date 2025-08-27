@@ -11,11 +11,11 @@ import click
 from rich.console import Console
 from rich.table import Table
 
-from .config import Config, ReportConfig, ScanConfig
-from .logging import setup_logger
-from .models import ScanResult, ValidationStatus
-from .report import HTMLReportGenerator, JSONReportGenerator
-from .scanner import MediaScanner
+from media_audit.core import ScanResult, ValidationStatus
+from media_audit.domain import MediaScanner
+from media_audit.infrastructure import Config, ReportConfig, ScanConfig
+from media_audit.presentation.reports import HTMLReportGenerator, JSONReportGenerator
+from media_audit.shared import setup_logger
 
 console = Console()
 
@@ -169,7 +169,7 @@ def scan(
         cfg.scan.profiles = list(profiles)
 
     if allow_codecs:
-        from .models import CodecType
+        from media_audit.core import CodecType
 
         cfg.scan.allowed_codecs = []
         for codec in allow_codecs:
@@ -206,7 +206,7 @@ def scan(
     if patterns:
         import yaml
 
-        from .patterns import MediaPatterns
+        from media_audit.domain import MediaPatterns
 
         with patterns.open("r", encoding="utf-8") as f:
             pattern_data = yaml.safe_load(f)

@@ -114,7 +114,7 @@ Example:
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from media_audit.models import MovieItem, ValidationStatus
+from media_audit.core import MovieItem, ValidationStatus
 
 
 class MovieParser:
@@ -301,8 +301,8 @@ import click
 from rich.console import Console
 
 # Local
-from media_audit.models import MovieItem, ValidationStatus
-from media_audit.patterns import CompiledPatterns
+from media_audit.core import MovieItem, ValidationStatus
+from media_audit.domain.patterns import CompiledPatterns
 ```
 
 ## Commit Guidelines

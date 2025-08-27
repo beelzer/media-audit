@@ -468,8 +468,8 @@ class JellyfinIntegration:
 
 ```python
 # custom-validator.py
-from media_audit.validator import MediaValidator
-from media_audit.models import ValidationIssue, ValidationStatus
+from media_audit.domain.validation import MediaValidator
+from media_audit.core import ValidationIssue, ValidationStatus
 
 class CustomMediaValidator(MediaValidator):
     """Extended validator with custom rules."""
@@ -600,8 +600,8 @@ class CustomMediaValidator(MediaValidator):
             )
 
 # Usage with custom validator
-from media_audit.config import ScanConfig
-from media_audit.scanner import MediaScanner
+from media_audit.infrastructure.config import ScanConfig
+from media_audit.domain.scanning import MediaScanner
 
 config = ScanConfig(root_paths=[Path("/media")])
 scanner = MediaScanner(config)

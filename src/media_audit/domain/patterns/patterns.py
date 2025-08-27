@@ -8,7 +8,7 @@ from enum import StrEnum
 from pathlib import Path
 from re import Pattern
 
-from .logging import get_logger
+from media_audit.shared.logging import get_logger
 
 # Type aliases for better readability
 type PatternList = list[str]

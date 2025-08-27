@@ -53,7 +53,7 @@ docs = [
 ]
 
 [project.scripts]
-media-audit = "media_audit.cli:main"
+media-audit = "media_audit.presentation.cli:main"
 
 [project.urls]
 Homepage = "https://github.com/beelzer/media-audit"

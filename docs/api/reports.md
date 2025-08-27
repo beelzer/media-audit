@@ -9,7 +9,7 @@ This reference documents the report generation system for creating HTML and JSON
 Generates interactive HTML reports with embedded styling and JavaScript.
 
 ```python
-from media_audit.report import HTMLReportGenerator
+from media_audit.presentation.reports import HTMLReportGenerator
 from pathlib import Path
 
 class HTMLReportGenerator:
@@ -53,7 +53,7 @@ def generate(
 **Usage Example**:
 
 ```python
-from media_audit.report import HTMLReportGenerator
+from media_audit.presentation.reports import HTMLReportGenerator
 
 generator = HTMLReportGenerator()
 generator.generate(
@@ -184,7 +184,7 @@ function sortItems(criteria) {
 Generates structured JSON reports suitable for automation and integration.
 
 ```python
-from media_audit.report import JSONReportGenerator
+from media_audit.presentation.reports import JSONReportGenerator
 
 class JSONReportGenerator:
     """Generates structured JSON reports."""
@@ -216,7 +216,7 @@ def generate(
 **Usage Example**:
 
 ```python
-from media_audit.report import JSONReportGenerator
+from media_audit.presentation.reports import JSONReportGenerator
 
 generator = JSONReportGenerator()
 generator.generate(

@@ -402,7 +402,7 @@ ValidationError: report.output_path directory is not writable
 ### Python API
 
 ```python
-from media_audit.config import Config, ScanConfig, ReportConfig
+from media_audit.infrastructure.config import Config, ScanConfig, ReportConfig
 from pathlib import Path
 
 # Create configuration programmatically
@@ -460,7 +460,7 @@ merged_config = base_config.merge(overrides)
 
 ```python
 import os
-from media_audit.config import Config
+from media_audit.infrastructure.config import Config
 
 def create_dynamic_config():
     """Create configuration based on runtime conditions."""
@@ -660,7 +660,7 @@ scan:
 ### Custom Validation
 
 ```python
-from media_audit.config import Config, ValidationError
+from media_audit.infrastructure.config import Config, ValidationError
 
 class CustomConfig(Config):
     """Configuration with additional validation."""

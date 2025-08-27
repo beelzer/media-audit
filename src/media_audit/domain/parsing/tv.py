@@ -6,8 +6,7 @@ import re
 from pathlib import Path
 from typing import Any
 
-from media_audit.logging import get_logger
-from media_audit.models import (
+from media_audit.core import (
     EpisodeItem,
     MediaAssets,
     MediaType,
@@ -15,6 +14,7 @@ from media_audit.models import (
     SeriesItem,
     VideoInfo,
 )
+from media_audit.shared.logging import get_logger
 
 from .base import BaseParser
 
@@ -77,7 +77,7 @@ class TVParser(BaseParser):
             if season.episodes:
                 series.seasons.append(season)
 
-        series.update_episode_count()
+        # Episode count is calculated automatically via property
         return series
 
     def parse_season(self, directory: Path, series_path: Path) -> SeasonItem | None:
@@ -116,15 +116,16 @@ class TVParser(BaseParser):
             type=MediaType.TV_EPISODE,
             season_number=ep_info["season"],
             episode_number=ep_info["episode"],
-            episode_title=ep_info.get("title"),
+            title=ep_info.get("title"),
             video_info=VideoInfo(path=video_path),
         )
 
         # Extract metadata from filename
         video_name = video_path.stem
-        episode.quality = self.extract_quality(video_name)
-        episode.source = self.extract_source(video_name)
-        episode.release_group = self.extract_release_group(video_name)
+        # Store metadata in the metadata dict instead of direct attributes
+        episode.metadata["source"] = self.extract_source(video_name)
+        episode.metadata["release_group"] = self.extract_release_group(video_name)
+        episode.metadata["quality"] = self.extract_quality(video_name)
 
         # Look for episode title card
         episode.assets = self.scan_episode_assets(video_path)

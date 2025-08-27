@@ -6,8 +6,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from media_audit.logging import get_logger
-from media_audit.models import (
+from media_audit.core import (
     EpisodeItem,
     MediaAssets,
     MovieItem,
@@ -17,6 +16,7 @@ from media_audit.models import (
     ValidationIssue,
     VideoInfo,
 )
+from media_audit.shared import get_logger
 
 
 class JSONReportGenerator:
@@ -108,13 +108,11 @@ class JSONReportGenerator:
             "name": episode.name,
             "season_number": episode.season_number,
             "episode_number": episode.episode_number,
-            "episode_title": episode.episode_title,
-            "release_group": episode.release_group,
-            "quality": episode.quality,
-            "source": episode.source,
+            "title": episode.title,  # Fixed: EpisodeItem uses 'title' not 'episode_title'
             "status": episode.status.value,
             "issues": self._serialize_issues(episode.issues),
             "assets": self._serialize_assets(episode.assets),
+            "metadata": episode.metadata,  # Include metadata dict which has quality, source, etc.
             "video_info": self._serialize_video_info(episode.video_info)
             if episode.video_info
             else None,

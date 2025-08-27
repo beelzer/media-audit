@@ -6,14 +6,14 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from media_audit.models import CodecType, VideoInfo
-from media_audit.probe.ffprobe import FFProbe, probe_video
+from media_audit.core import CodecType, VideoInfo
+from media_audit.infrastructure.probe.ffprobe import FFProbe, probe_video
 
 
 @pytest.fixture
 def ffprobe_instance():
     """Create FFProbe instance."""
-    with patch("media_audit.probe.ffprobe.shutil.which") as mock_which:
+    with patch("media_audit.infrastructure.probe.ffprobe.shutil.which") as mock_which:
         mock_which.return_value = "/usr/bin/ffprobe"
         return FFProbe()
 
@@ -46,12 +46,12 @@ def mock_ffprobe_output():
 
 def test_ffprobe_available():
     """Test checking if ffprobe is available."""
-    with patch("media_audit.probe.ffprobe.shutil.which") as mock_which:
+    with patch("media_audit.infrastructure.probe.ffprobe.shutil.which") as mock_which:
         mock_which.return_value = "/usr/bin/ffprobe"
         ffprobe = FFProbe()
         assert ffprobe.ffprobe_path == "/usr/bin/ffprobe"
 
-    with patch("media_audit.probe.ffprobe.shutil.which") as mock_which:
+    with patch("media_audit.infrastructure.probe.ffprobe.shutil.which") as mock_which:
         mock_which.return_value = None
         with pytest.raises(RuntimeError, match="ffprobe not found"):
             FFProbe()
@@ -59,7 +59,7 @@ def test_ffprobe_available():
 
 def test_parse_codec_type():
     """Test parsing codec type from string."""
-    with patch("media_audit.probe.ffprobe.shutil.which") as mock_which:
+    with patch("media_audit.infrastructure.probe.ffprobe.shutil.which") as mock_which:
         mock_which.return_value = "/usr/bin/ffprobe"
         ffprobe = FFProbe()
 
@@ -157,9 +157,11 @@ def test_probe_missing_fields(ffprobe_instance):
 
 def test_probe_video_function():
     """Test the probe_video convenience function."""
-    with patch("media_audit.probe.ffprobe.shutil.which") as mock_which:
+    with patch("media_audit.infrastructure.probe.ffprobe.shutil.which") as mock_which:
         mock_which.return_value = "/usr/bin/ffprobe"
-        with patch("media_audit.probe.ffprobe.FFProbe.get_video_info") as mock_get_video_info:
+        with patch(
+            "media_audit.infrastructure.probe.ffprobe.FFProbe.get_video_info"
+        ) as mock_get_video_info:
             mock_get_video_info.return_value = VideoInfo(
                 path=Path("/test/video.mkv"),
                 codec=CodecType.HEVC,

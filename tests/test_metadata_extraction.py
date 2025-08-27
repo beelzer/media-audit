@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import pytest
 
-from media_audit.parsers import MovieParser, TVParser
-from media_audit.patterns import get_patterns
+from media_audit.domain.parsing import MovieParser, TVParser
+from media_audit.domain.patterns import get_patterns
 
 
 @pytest.fixture
@@ -106,9 +106,9 @@ def test_episode_metadata_parsing(tv_parser, tmp_path):
     episode = series.seasons[0].episodes[0]
     assert episode.season_number == 2
     assert episode.episode_number == 1
-    assert episode.quality == "1080p"
-    assert episode.source == "WEBDL"
-    assert episode.release_group == "successfulcrab"
+    assert episode.metadata["quality"] == "1080p"
+    assert episode.metadata["source"] == "WEBDL"
+    assert episode.metadata["release_group"] == "successfulcrab"
 
 
 def test_plexmatch_parsing(tv_parser, tmp_path):

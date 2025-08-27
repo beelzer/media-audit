@@ -13,8 +13,8 @@ Key Features:
     - Integrated caching for performance
 
 Example:
-    >>> from media_audit.config import ScanConfig
-    >>> from media_audit.scanner import MediaScanner
+    >>> from media_audit.infrastructure.config import ScanConfig
+    >>> from media_audit.domain.scanning import MediaScanner
     >>>
     >>> config = ScanConfig(root_paths=[Path("/media")])
     >>> scanner = MediaScanner(config)
@@ -39,12 +39,12 @@ from rich.progress import (
     TextColumn,
 )
 
-from media_audit.cache import MediaCache
-from media_audit.config import ScanConfig
-from media_audit.logging import get_logger
-from media_audit.models import MovieItem, ScanResult, SeriesItem
-from media_audit.parsers import MovieParser, TVParser
-from media_audit.validator import MediaValidator
+from media_audit.core import MovieItem, ScanResult, SeriesItem
+from media_audit.domain.parsing import MovieParser, TVParser
+from media_audit.domain.validation import MediaValidator
+from media_audit.infrastructure.cache import MediaCache
+from media_audit.infrastructure.config import ScanConfig
+from media_audit.shared.logging import get_logger
 
 
 class MediaScanner:

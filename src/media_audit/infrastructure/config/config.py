@@ -8,9 +8,9 @@ from typing import Any
 
 import yaml
 
-from .logging import get_logger
-from .models import CodecType
-from .patterns import MediaPatterns, get_patterns
+from media_audit.core import CodecType
+from media_audit.domain.patterns import MediaPatterns, get_patterns
+from media_audit.shared.logging import get_logger
 
 
 @dataclass

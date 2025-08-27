@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from media_audit.cache import MediaCache
+from media_audit.infrastructure.cache import MediaCache
 
 
 @pytest.fixture

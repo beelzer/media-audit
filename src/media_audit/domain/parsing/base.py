@@ -5,10 +5,10 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from media_audit.cache import MediaCache
-from media_audit.logging import get_logger
-from media_audit.models import MediaAssets
-from media_audit.patterns import CompiledPatterns
+from media_audit.core import MediaAssets
+from media_audit.domain.patterns import CompiledPatterns
+from media_audit.infrastructure.cache import MediaCache
+from media_audit.shared.logging import get_logger
 
 
 class BaseParser:

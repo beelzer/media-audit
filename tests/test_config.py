@@ -3,8 +3,8 @@
 import tempfile
 from pathlib import Path
 
-from media_audit.config import Config, ReportConfig, ScanConfig
-from media_audit.models import CodecType
+from media_audit.core import CodecType
+from media_audit.infrastructure.config import Config, ReportConfig, ScanConfig
 
 
 def test_scan_config_defaults():

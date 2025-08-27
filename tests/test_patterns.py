@@ -1,11 +1,15 @@
 """Tests for pattern matching."""
 
-from media_audit.patterns import (
+from media_audit.domain.patterns import (
+    MediaPatterns,
+    get_patterns,
+)
+
+# Import predefined patterns directly from module
+from media_audit.domain.patterns.patterns import (
     EMBY_PATTERNS,
     JELLYFIN_PATTERNS,
     PLEX_PATTERNS,
-    MediaPatterns,
-    get_patterns,
 )
 
 

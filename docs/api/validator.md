@@ -9,8 +9,8 @@ This reference documents the validation system responsible for checking media it
 Main validation class that applies rules to media items and generates validation issues.
 
 ```python
-from media_audit.validator import MediaValidator
-from media_audit.config import ScanConfig
+from media_audit.domain.validation import MediaValidator
+from media_audit.infrastructure.config import ScanConfig
 
 class MediaValidator:
     """Validates media items against configured rules."""
@@ -367,7 +367,7 @@ if not movie.assets.trailers and not self._has_trailer_folder(movie.path):
 ### Extending MediaValidator
 
 ```python
-from media_audit.validator import MediaValidator
+from media_audit.domain.validation import MediaValidator
 
 class CustomValidator(MediaValidator):
     """Enhanced validator with custom rules."""
@@ -787,7 +787,7 @@ class BatchValidator(MediaValidator):
             item, video_info = item_video_pair
             if video_info.codec is None:
                 try:
-                    from media_audit.probe import probe_video
+                    from media_audit.infrastructure.probe import probe_video
                     probed = probe_video(video_info.path, cache=self.cache)
                     video_info.codec = probed.codec
                     video_info.resolution = probed.resolution

@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from media_audit.models import (
+from media_audit.core import (
     CodecType,
     EpisodeItem,
     MediaAssets,
@@ -69,7 +69,7 @@ def test_series_item():
     )
 
     assert series.type == MediaType.TV_SERIES
-    assert series.total_episodes == 0
+    assert series.actual_episode_count == 0  # Check calculated count instead
 
     # Add a season with episodes
     season = SeasonItem(
@@ -89,9 +89,8 @@ def test_series_item():
 
     season.episodes.append(episode)
     series.seasons.append(season)
-    series.update_episode_count()
 
-    assert series.total_episodes == 1
+    assert series.actual_episode_count == 1  # Use calculated property
     assert len(series.seasons) == 1
     assert len(series.seasons[0].episodes) == 1
 
@@ -189,7 +188,6 @@ def test_scan_result():
 
     season.episodes.append(episode)
     series.seasons.append(season)
-    series.update_episode_count()
     scan_result.series.append(series)
 
     # Update stats and verify

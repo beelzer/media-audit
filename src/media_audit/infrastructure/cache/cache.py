@@ -12,7 +12,7 @@ Key Features:
     - Cache statistics tracking
 
 Example:
-    >>> from media_audit.cache import MediaCache
+    >>> from media_audit.infrastructure.cache import MediaCache
     >>> cache = MediaCache(enabled=True)
     >>>
     >>> # Cache probe data
@@ -37,7 +37,7 @@ from dataclasses import dataclass, fields
 from pathlib import Path
 from typing import Any
 
-from media_audit.logging import get_logger
+from media_audit.shared.logging import get_logger
 
 type T = Any
 
@@ -56,7 +56,7 @@ def generate_schema_hash() -> str:
         str: 8-character hash of model schemas
 
     """
-    from media_audit.models import (
+    from media_audit.core import (
         EpisodeItem,
         MediaAssets,
         MovieItem,

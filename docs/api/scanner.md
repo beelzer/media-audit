@@ -9,8 +9,8 @@ This reference documents the scanner system responsible for discovering and proc
 The main scanner class that orchestrates the entire scanning process.
 
 ```python
-from media_audit.scanner import MediaScanner
-from media_audit.config import ScanConfig
+from media_audit.domain.scanning import MediaScanner
+from media_audit.infrastructure.config import ScanConfig
 from pathlib import Path
 
 class MediaScanner:
@@ -457,7 +457,7 @@ if self.cache.enabled:
 ### Extending MediaScanner
 
 ```python
-from media_audit.scanner import MediaScanner
+from media_audit.domain.scanning import MediaScanner
 
 class CustomScanner(MediaScanner):
     """Custom scanner with additional functionality."""

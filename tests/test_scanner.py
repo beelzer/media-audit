@@ -6,10 +6,10 @@ from unittest.mock import patch
 
 import pytest
 
-from media_audit.config import ScanConfig
-from media_audit.models import CodecType, MediaType, MovieItem, SeriesItem
-from media_audit.patterns import get_patterns
-from media_audit.scanner import MediaScanner
+from media_audit.core import CodecType, MediaType, MovieItem, SeriesItem
+from media_audit.domain.patterns import get_patterns
+from media_audit.domain.scanning import MediaScanner
+from media_audit.infrastructure.config import ScanConfig
 
 
 @pytest.fixture

@@ -4,8 +4,8 @@ from pathlib import Path
 
 import pytest
 
-from media_audit.parsers.base import BaseParser
-from media_audit.patterns import get_patterns
+from media_audit.domain.parsing.base import BaseParser
+from media_audit.domain.patterns import get_patterns
 
 
 @pytest.fixture

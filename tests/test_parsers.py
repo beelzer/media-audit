@@ -2,8 +2,8 @@
 
 from pathlib import Path
 
-from media_audit.parsers import MovieParser, TVParser
-from media_audit.patterns import PLEX_PATTERNS
+from media_audit.domain.parsing import MovieParser, TVParser
+from media_audit.domain.patterns.patterns import PLEX_PATTERNS
 
 
 def test_movie_parser_year_extraction():

@@ -9,7 +9,7 @@ This reference documents the data models used throughout Media Audit, including 
 Base class for all media items in the system.
 
 ```python
-from media_audit.models import MediaItem, MediaType, ValidationStatus
+from media_audit.core import MediaItem, MediaType, ValidationStatus
 
 @dataclass
 class MediaItem:

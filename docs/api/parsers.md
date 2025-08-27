@@ -130,7 +130,7 @@ def extract_metadata(self, directory: Path) -> dict[str, Any]:
 Specialized parser for movie directories.
 
 ```python
-from media_audit.parsers import MovieParser
+from media_audit.domain.parsing import MovieParser
 
 class MovieParser(BaseParser):
     """Parser for movie directories."""
@@ -254,8 +254,8 @@ def find_main_video(self, directory: Path) -> Path | None:
 #### Usage Examples
 
 ```python
-from media_audit.parsers import MovieParser
-from media_audit.patterns import get_patterns
+from media_audit.domain.parsing import MovieParser
+from media_audit.domain.patterns import get_patterns
 
 # Initialize parser
 patterns = get_patterns(['plex', 'jellyfin'])
@@ -286,7 +286,7 @@ if movie:
 Specialized parser for TV show directory structures.
 
 ```python
-from media_audit.parsers import TVParser
+from media_audit.domain.parsing import TVParser
 
 class TVParser(BaseParser):
     """Parser for TV show directories."""
@@ -445,7 +445,7 @@ def extract_episode_info(self, episode_path: Path) -> dict[str, Any]:
 #### Usage Examples
 
 ```python
-from media_audit.parsers import TVParser
+from media_audit.domain.parsing import TVParser
 
 # Initialize parser
 parser = TVParser(compiled_patterns)
@@ -594,7 +594,7 @@ def deserialize_movie(self, data: dict[str, Any]) -> MovieItem:
 
 ```python
 from media_audit.parsers.base import BaseParser
-from media_audit.models import MediaItem, MediaType
+from media_audit.core import MediaItem, MediaType
 
 class AnimeParser(BaseParser):
     """Custom parser for anime content."""
@@ -630,7 +630,7 @@ class AnimeParser(BaseParser):
 
         # Set video info if available
         if main_video:
-            from media_audit.probe import probe_video
+            from media_audit.infrastructure.probe import probe_video
             anime.video_info = probe_video(main_video, cache=self.cache)
 
         return anime

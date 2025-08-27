@@ -9,8 +9,8 @@ from functools import cache
 from pathlib import Path
 from typing import Any
 
-from media_audit.cache import MediaCache
-from media_audit.models import CodecType, VideoInfo
+from media_audit.core import CodecType, VideoInfo
+from media_audit.infrastructure.cache import MediaCache
 
 
 class FFProbe:

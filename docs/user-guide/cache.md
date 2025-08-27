@@ -188,7 +188,7 @@ if probe_cache.exists():
 
 ```python
 # cache-stats.py
-from media_audit.cache import MediaCache
+from media_audit.infrastructure.cache import MediaCache
 from pathlib import Path
 
 cache = MediaCache(Path.home() / ".cache" / "media-audit")
@@ -273,7 +273,7 @@ CACHE_SCHEMA_VERSION = "2.0.0"
 
 def generate_schema_hash():
     """Generate hash of current model schemas."""
-    from media_audit.models import MovieItem, SeriesItem, VideoInfo
+    from media_audit.core import MovieItem, SeriesItem, VideoInfo
     # ... generates hash from model field definitions
     return schema_hash
 ```
@@ -390,7 +390,7 @@ media-audit scan --roots "D:\Media"
 ```python
 # debug-cache.py
 import logging
-from media_audit.cache import MediaCache
+from media_audit.infrastructure.cache import MediaCache
 
 logging.basicConfig(level=logging.DEBUG)
 cache = MediaCache(enabled=True)
@@ -506,7 +506,7 @@ recover_valid_cache_entries(cache_dir)
 
 ```python
 # custom-cache.py
-from media_audit.cache import MediaCache
+from media_audit.infrastructure.cache import MediaCache
 from pathlib import Path
 import redis  # Example: Redis-backed cache
 
