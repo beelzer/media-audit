@@ -357,7 +357,7 @@ jobs:
           retention-days: 7
 
       - name: 📈 Coverage report
-        if: matrix.coverage && github.event_name == 'pull_request'
+        if: matrix.coverage
         uses: codecov/codecov-action@v4
         with:
           files: ./coverage.xml
