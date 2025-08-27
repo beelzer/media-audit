@@ -98,4 +98,4 @@ def test_config_codec_conversion():
     assert CodecType.HEVC in config.scan.allowed_codecs
     assert CodecType.H264 in config.scan.allowed_codecs
     assert CodecType.AV1 in config.scan.allowed_codecs
-    assert CodecType.OTHER in config.scan.allowed_codecs  # Invalid becomes OTHER
+    assert CodecType.UNKNOWN in config.scan.allowed_codecs  # Invalid becomes UNKNOWN

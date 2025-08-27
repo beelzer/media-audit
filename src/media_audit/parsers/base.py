@@ -4,14 +4,11 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
-from typing import TYPE_CHECKING
 
+from media_audit.cache import MediaCache
 from media_audit.logging import get_logger
 from media_audit.models import MediaAssets
 from media_audit.patterns import CompiledPatterns
-
-if TYPE_CHECKING:
-    from media_audit.cache import MediaCache
 
 
 class BaseParser:
@@ -81,16 +78,17 @@ class BaseParser:
                 classification = self.classify_asset(item, directory)
                 if classification:
                     asset_type, path = classification
-                    if asset_type == "poster":
-                        assets.posters.append(path)
-                    elif asset_type == "background":
-                        assets.backgrounds.append(path)
-                    elif asset_type == "banner":
-                        assets.banners.append(path)
-                    elif asset_type == "trailer":
-                        assets.trailers.append(path)
-                    elif asset_type == "title_card":
-                        assets.title_cards.append(path)
+                    match asset_type:
+                        case "poster":
+                            assets.posters.append(path)
+                        case "background":
+                            assets.backgrounds.append(path)
+                        case "banner":
+                            assets.banners.append(path)
+                        case "trailer":
+                            assets.trailers.append(path)
+                        case "title_card":
+                            assets.title_cards.append(path)
 
         return assets
 

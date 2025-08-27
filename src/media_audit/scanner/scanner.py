@@ -8,7 +8,6 @@ import threading
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 from rich.console import Console
 from rich.progress import (
@@ -18,13 +17,11 @@ from rich.progress import (
 )
 
 from media_audit.cache import MediaCache
+from media_audit.config import ScanConfig
 from media_audit.logging import get_logger
 from media_audit.models import MovieItem, ScanResult, SeriesItem
 from media_audit.parsers import MovieParser, TVParser
 from media_audit.validator import MediaValidator
-
-if TYPE_CHECKING:
-    from media_audit.config import ScanConfig
 
 
 class MediaScanner:

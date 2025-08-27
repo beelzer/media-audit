@@ -70,7 +70,7 @@ def test_parse_codec_type():
     assert ffprobe._map_codec("vp9") == CodecType.VP9
     assert ffprobe._map_codec("mpeg4") == CodecType.MPEG4
     assert ffprobe._map_codec("mpeg2video") == CodecType.MPEG2
-    assert ffprobe._map_codec("unknown") == CodecType.OTHER
+    assert ffprobe._map_codec("unknown") == CodecType.UNKNOWN
 
 
 def test_probe_success(ffprobe_instance, mock_ffprobe_output):

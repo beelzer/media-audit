@@ -7,12 +7,10 @@ import shutil
 import subprocess
 from functools import cache
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
+from media_audit.cache import MediaCache
 from media_audit.models import CodecType, VideoInfo
-
-if TYPE_CHECKING:
-    from media_audit.cache import MediaCache
 
 
 class FFProbe:
@@ -136,7 +134,7 @@ class FFProbe:
             case name if "mpeg2" in name:
                 return CodecType.MPEG2
             case _:
-                return CodecType.OTHER
+                return CodecType.UNKNOWN
 
 
 @cache

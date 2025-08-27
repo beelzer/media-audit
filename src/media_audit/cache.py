@@ -9,11 +9,11 @@ import pickle
 import time
 from dataclasses import dataclass, fields
 from pathlib import Path
-from typing import Any, TypeVar
+from typing import Any
 
 from media_audit.logging import get_logger
 
-T = TypeVar("T")
+type T = Any
 
 # Cache schema version - increment this when data structures change
 # Or better, generate it from model definitions
@@ -133,7 +133,7 @@ class MediaCache:
         try:
             stat = file_path.stat()
             # Check if file has been modified
-            return not (stat.st_mtime != entry.file_mtime or stat.st_size != entry.file_size)
+            return stat.st_mtime == entry.file_mtime and stat.st_size == entry.file_size
         except OSError as e:
             self.logger.debug(f"Failed to stat file {file_path}: {e}")
             return False
@@ -300,7 +300,7 @@ class MediaCache:
             dir_mtime = self._get_directory_mtime(directory)
 
             # Directory has been modified if mtime is newer than cache time
-            return not dir_mtime > entry.file_mtime
+            return dir_mtime <= entry.file_mtime
         except Exception:
             return False
 

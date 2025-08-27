@@ -90,8 +90,8 @@ class Config:
                     codecs.append(CodecType[codec_str.upper()])
                 except KeyError:
                     logger = get_logger("config")
-                    logger.warning(f"Unknown codec type '{codec_str}', using OTHER")
-                    codecs.append(CodecType.OTHER)
+                    logger.warning(f"Unknown codec type '{codec_str}', using UNKNOWN")
+                    codecs.append(CodecType.UNKNOWN)
             scan_data["allowed_codecs"] = codecs
 
         # Handle custom patterns

@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
+from .config import ScanConfig
 from .logging import get_logger
 from .models import (
     CodecType,
@@ -18,9 +19,6 @@ from .models import (
     VideoInfo,
 )
 from .probe import probe_video
-
-if TYPE_CHECKING:
-    from .config import ScanConfig
 
 
 class MediaValidator:

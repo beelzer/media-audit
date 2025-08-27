@@ -293,6 +293,8 @@ def _count_issues_by_severity(result: ScanResult) -> tuple[int, int]:
                     error_count += 1
                 case ValidationStatus.WARNING:
                     warning_count += 1
+                case _:
+                    pass
 
     return error_count, warning_count
 

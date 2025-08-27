@@ -45,7 +45,7 @@ class JSONReportGenerator:
     def _serialize_result(self, result: ScanResult) -> dict[str, Any]:
         """Serialize scan result to dictionary."""
         return {
-            "scan_time": result.scan_time.isoformat(),
+            "scan_time": result.scan_time.isoformat() if result.scan_time else None,
             "duration": result.duration,
             "root_paths": [str(p) for p in result.root_paths],
             "total_items": result.total_items,

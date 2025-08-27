@@ -3,14 +3,11 @@
 from __future__ import annotations
 
 import logging
+from logging import Logger
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 from rich.console import Console
 from rich.logging import RichHandler
-
-if TYPE_CHECKING:
-    from logging import Logger
 
 
 def setup_logger(
