@@ -83,22 +83,8 @@ jobs:
       - name: Install markdownlint
         run: npm install --save-dev markdownlint-cli
 
-      - name: Create markdownlint configuration
-        run: |
-          echo '{
-            "default": true,
-            "MD013": false,
-            "MD033": false,
-            "MD041": false,
-            "MD024": { "siblings_only": true },
-            "MD025": { "front_matter_title": "" },
-            "MD046": false,
-            "no-hard-tabs": false,
-            "line-length": false
-          }' > .markdownlint.json
-
       - name: Run markdownlint
-        run: npx markdownlint docs/**/*.md
+        run: npx markdownlint docs/**/*.md --config .markdownlint.yml
         continue-on-error: ${{ github.event_name == 'pull_request' }}
 
       - name: Comment PR on lint failure
@@ -147,7 +133,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Check for broken links in Markdown
+      - name: Check for broken links in documentation
         uses: gaurav-nelson/github-action-markdown-link-check@v1
         with:
           folder-path: 'docs'
@@ -155,22 +141,16 @@ jobs:
           check-modified-files-only: ${{ github.event_name == 'pull_request' && 'yes' || 'no' }}
           use-quiet-mode: 'yes'
           use-verbose-mode: 'no'
-          config-file: |
-            {
-              "ignorePatterns": [
-                {
-                  "pattern": "^http://localhost"
-                },
-                {
-                  "pattern": "^https://localhost"
-                }
-              ],
-              "timeout": "20s",
-              "retryOn429": true,
-              "retryCount": 3,
-              "aliveStatusCodes": [200, 206, 301, 302, 303]
-            }
+          config-file: '.markdown-link-check.json'
           max-depth: 3
+
+      - name: Check for broken links in README
+        uses: gaurav-nelson/github-action-markdown-link-check@v1
+        with:
+          file-path: 'README.md'
+          check-modified-files-only: ${{ github.event_name == 'pull_request' && 'yes' || 'no' }}
+          use-quiet-mode: 'yes'
+          config-file: '.markdown-link-check.json'
 
       - name: Validate frontmatter in Markdown files
         run: |

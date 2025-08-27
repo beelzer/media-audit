@@ -18,6 +18,7 @@ from rich.progress import (
 )
 
 from media_audit.cache import MediaCache
+from media_audit.logging import get_logger
 from media_audit.models import MovieItem, ScanResult, SeriesItem
 from media_audit.parsers import MovieParser, TVParser
 from media_audit.validator import MediaValidator
@@ -33,6 +34,7 @@ class MediaScanner:
         """Initialize scanner with configuration."""
         self.config = config
         self.console = Console()
+        self.logger = get_logger("scanner")
         self._cancelled = False
         self._cancel_lock = threading.Lock()
 
@@ -127,7 +129,9 @@ class MediaScanner:
                     break
 
                 if not root_path.exists():
-                    result.errors.append(f"Root path does not exist: {root_path}")
+                    error_msg = f"Root path does not exist: {root_path}"
+                    self.logger.error(error_msg)
+                    result.errors.append(error_msg)
                     continue
 
                 progress.update(
@@ -221,7 +225,8 @@ class MediaScanner:
                                     description=f"[cyan]Movies: {processed}/{total_movies} - {movie.name}[/cyan]",
                                 )
                     except Exception as e:
-                        result.errors.append(f"Error processing movie: {e}")
+                        self.logger.exception(f"Error processing movie {movie_dir}: {e}")
+                        result.errors.append(f"Error processing {movie_dir.name}: {str(e)}")
                         if progress:
                             progress.update(movie_task, advance=1)
         else:
@@ -240,7 +245,8 @@ class MediaScanner:
                                 description=f"[cyan]Movies: {i}/{total_movies} - {movie.name}[/cyan]",
                             )
                 except Exception as e:
-                    result.errors.append(f"Error processing {movie_dir}: {e}")
+                    self.logger.exception(f"Error processing movie {movie_dir}: {e}")
+                    result.errors.append(f"Error processing {movie_dir.name}: {str(e)}")
                     if progress:
                         progress.update(movie_task, advance=1)
 
@@ -290,7 +296,8 @@ class MediaScanner:
                                     description=f"[magenta]TV Series: {processed}/{total_series} - {series.name}[/magenta]",
                                 )
                     except Exception as e:
-                        result.errors.append(f"Error processing series: {e}")
+                        self.logger.exception(f"Error processing series {series_dir}: {e}")
+                        result.errors.append(f"Error processing {series_dir.name}: {str(e)}")
                         if progress:
                             progress.update(tv_task, advance=1)
         else:
@@ -309,7 +316,8 @@ class MediaScanner:
                                 description=f"[magenta]TV Series: {i}/{total_series} - {series.name}[/magenta]",
                             )
                 except Exception as e:
-                    result.errors.append(f"Error processing {series_dir}: {e}")
+                    self.logger.exception(f"Error processing series {series_dir}: {e}")
+                    result.errors.append(f"Error processing {series_dir.name}: {str(e)}")
                     if progress:
                         progress.update(tv_task, advance=1)
 
@@ -342,7 +350,8 @@ class MediaScanner:
                                 description=f"[yellow]Items: {i}/{total_items} - Series: {series.name}[/yellow]",
                             )
                 except Exception as e:
-                    result.errors.append(f"Error processing {item}: {e}")
+                    self.logger.exception(f"Error processing series {item}: {e}")
+                    result.errors.append(f"Error processing {item.name}: {str(e)}")
                     if progress:
                         progress.update(mixed_task, advance=1)
             elif self.movie_parser.is_movie_directory(item):
@@ -357,7 +366,8 @@ class MediaScanner:
                                 description=f"[yellow]Items: {i}/{total_items} - Movie: {movie.name}[/yellow]",
                             )
                 except Exception as e:
-                    result.errors.append(f"Error processing {item}: {e}")
+                    self.logger.exception(f"Error processing movie {item}: {e}")
+                    result.errors.append(f"Error processing {item.name}: {str(e)}")
                     if progress:
                         progress.update(mixed_task, advance=1)
             else:
@@ -366,14 +376,24 @@ class MediaScanner:
 
     def _process_movie(self, directory: Path) -> MovieItem | None:
         """Process a single movie directory."""
-        movie = self.movie_parser.parse(directory)
-        if movie:
-            self.validator.validate_movie(movie)
-        return movie
+        try:
+            movie = self.movie_parser.parse(directory)
+            if movie:
+                self.validator.validate_movie(movie)
+                self.logger.debug(f"Processed movie: {movie.name}")
+            return movie
+        except Exception as e:
+            self.logger.error(f"Failed to process movie {directory}: {e}")
+            return None
 
     def _process_series(self, directory: Path) -> SeriesItem | None:
         """Process a single TV series directory."""
-        series = self.tv_parser.parse(directory)
-        if series:
-            self.validator.validate_series(series)
-        return series
+        try:
+            series = self.tv_parser.parse(directory)
+            if series:
+                self.validator.validate_series(series)
+                self.logger.debug(f"Processed series: {series.name}")
+            return series
+        except Exception as e:
+            self.logger.error(f"Failed to process series {directory}: {e}")
+            return None

@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import shutil
 import subprocess
-from functools import lru_cache
+from functools import cache
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -61,7 +61,16 @@ class FFProbe:
                 self.cache.set_probe_data(file_path, data)
 
             return data  # type: ignore[no-any-return]
-        except (subprocess.CalledProcessError, json.JSONDecodeError, FileNotFoundError):
+        except subprocess.CalledProcessError as e:
+            # Log specific ffprobe error if available
+            if e.stderr:
+                import logging
+
+                logging.getLogger("media_audit.probe").warning(
+                    f"FFprobe error for {file_path}: {e.stderr}"
+                )
+            return {}
+        except (json.JSONDecodeError, FileNotFoundError):
             return {}
 
     def get_video_info(self, file_path: Path) -> VideoInfo:
@@ -97,35 +106,42 @@ class FFProbe:
                 if width and height:
                     info.resolution = (int(width), int(height))
 
-        except Exception:
-            # Return partial info on error
-            pass
+        except Exception as e:
+            # Log unexpected errors
+            import logging
+
+            logging.getLogger("media_audit.probe").debug(
+                f"Unexpected error probing {file_path}: {e}"
+            )
 
         return info
 
     @staticmethod
     def _map_codec(codec_name: str) -> CodecType:
-        """Map codec name to CodecType."""
-        codec_map = {
-            "hevc": CodecType.HEVC,
-            "h265": CodecType.H265,
-            "av1": CodecType.AV1,
-            "h264": CodecType.H264,
-            "vp9": CodecType.VP9,
-            "mpeg4": CodecType.MPEG4,
-            "mpeg2video": CodecType.MPEG2,
-        }
+        """Map codec name to CodecType using pattern matching."""
+        # Use match/case for cleaner codec mapping (Python 3.10+)
+        match codec_name:
+            case name if "hevc" in name:
+                return CodecType.HEVC
+            case name if "h265" in name:
+                return CodecType.H265
+            case name if "av1" in name:
+                return CodecType.AV1
+            case name if "h264" in name or "avc" in name:
+                return CodecType.H264
+            case name if "vp9" in name:
+                return CodecType.VP9
+            case name if "mpeg4" in name:
+                return CodecType.MPEG4
+            case name if "mpeg2" in name:
+                return CodecType.MPEG2
+            case _:
+                return CodecType.OTHER
 
-        for key, value in codec_map.items():
-            if key in codec_name:
-                return value
 
-        return CodecType.OTHER
-
-
-@lru_cache(maxsize=1)
+@cache
 def _get_default_probe() -> FFProbe:
-    """Get default FFProbe instance."""
+    """Get default FFProbe instance (singleton)."""
     return FFProbe()
 
 

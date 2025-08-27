@@ -8,6 +8,7 @@ from typing import Any
 
 from jinja2 import Template
 
+from media_audit.logging import get_logger
 from media_audit.models import ScanResult, ValidationStatus
 
 HTML_TEMPLATE = """<!DOCTYPE html>
@@ -1232,6 +1233,10 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 class HTMLReportGenerator:
     """Generates modern interactive HTML reports."""
 
+    def __init__(self) -> None:
+        """Initialize HTML report generator."""
+        self.logger = get_logger("report.html")
+
     def generate(
         self,
         result: ScanResult,
@@ -1240,6 +1245,7 @@ class HTMLReportGenerator:
     ) -> None:
         """Generate HTML report file."""
         # Ensure directory exists
+        self.logger.info(f"Generating HTML report: {output_path}")
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
         # Prepare data

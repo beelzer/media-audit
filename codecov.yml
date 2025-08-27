@@ -1,0 +1,54 @@
+# Codecov configuration for media-audit
+
+coverage:
+  # Coverage precision (number of decimal places)
+  precision: 2
+  round: down
+
+  # Coverage range colors
+  range: "70...100"
+
+  status:
+    project:
+      default:
+        # Coverage must meet these thresholds
+        target: auto # Automatically set based on base coverage
+        threshold: 1% # Allow 1% coverage drop
+        paths:
+          - "src/"
+
+    patch:
+      default:
+        # Coverage for new/modified code
+        target: 80% # New code should have at least 80% coverage
+        threshold: 5% # Allow 5% drop in patch coverage
+
+    changes: false # Don't comment on uncovered lines
+
+comment:
+  layout: "reach,diff,flags,files,footer"
+  behavior: default
+  require_changes: true # Only comment if coverage changes
+  require_base: false # Don't require base coverage
+  require_head: true # Require head coverage
+
+# Ignore certain files/paths
+ignore:
+  - "tests/"
+  - "docs/"
+  - "examples/"
+  - "**/__init__.py"
+  - "**/test_*.py"
+  - "setup.py"
+  - "src/media_audit/__main__.py"
+
+# Flag configuration for different test types
+flags:
+  unittests:
+    paths:
+      - src/
+    carryforward: true
+
+# GitHub Checks
+github_checks:
+  annotations: true

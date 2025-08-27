@@ -6,6 +6,8 @@ import re
 from dataclasses import dataclass, field
 from re import Pattern
 
+from .logging import get_logger
+
 
 @dataclass
 class MediaPatterns:
@@ -181,6 +183,9 @@ def get_patterns(profiles: list[str] | None = None) -> MediaPatterns:
     if not profiles:
         return COMBINED_PATTERNS
 
+    logger = get_logger("patterns")
+    logger.debug(f"Loading patterns for profiles: {profiles}")
+
     all_patterns = MediaPatterns(
         poster_patterns=[],
         background_patterns=[],
@@ -191,14 +196,20 @@ def get_patterns(profiles: list[str] | None = None) -> MediaPatterns:
 
     for profile in profiles:
         if profile.lower() in PATTERN_PRESETS:
+            logger.debug(f"Loading preset patterns for profile: {profile}")
             preset = PATTERN_PRESETS[profile.lower()]
             all_patterns.poster_patterns.extend(preset.poster_patterns)
             all_patterns.background_patterns.extend(preset.background_patterns)
             all_patterns.banner_patterns.extend(preset.banner_patterns)
             all_patterns.trailer_patterns.extend(preset.trailer_patterns)
             all_patterns.title_card_patterns.extend(preset.title_card_patterns)
+        else:
+            logger.warning(
+                f"Unknown profile '{profile}', skipping. Available: {list(PATTERN_PRESETS.keys())}"
+            )
 
     # Remove duplicates
+    logger.debug("Removing duplicate patterns")
     all_patterns.poster_patterns = list(set(all_patterns.poster_patterns))
     all_patterns.background_patterns = list(set(all_patterns.background_patterns))
     all_patterns.banner_patterns = list(set(all_patterns.banner_patterns))

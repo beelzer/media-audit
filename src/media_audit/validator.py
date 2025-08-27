@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from .logging import get_logger
 from .models import (
     CodecType,
     EpisodeItem,
@@ -30,6 +31,7 @@ class MediaValidator:
         self.config = config
         self.allowed_codecs = set(config.allowed_codecs)
         self.cache = cache
+        self.logger = get_logger("validator")
 
     def validate(self, item: MediaItem) -> None:
         """Validate a media item and add issues."""
@@ -44,6 +46,7 @@ class MediaValidator:
 
     def validate_movie(self, movie: MovieItem) -> None:
         """Validate a movie."""
+        self.logger.debug(f"Validating movie: {movie.name}")
         # Check for required assets
         if not movie.assets.posters:
             movie.issues.append(
@@ -89,6 +92,7 @@ class MediaValidator:
 
     def validate_series(self, series: SeriesItem) -> None:
         """Validate a TV series."""
+        self.logger.debug(f"Validating series: {series.name}")
         # Check for series-level assets
         if not series.assets.posters:
             series.issues.append(
@@ -184,6 +188,7 @@ class MediaValidator:
                 video_info.size = probed_info.size
                 video_info.raw_info = probed_info.raw_info
             except Exception as e:
+                self.logger.error(f"Failed to probe video file {video_info.path}: {e}")
                 item.issues.append(
                     ValidationIssue(
                         category="video",

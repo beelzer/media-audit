@@ -8,6 +8,7 @@ from typing import Any
 
 import yaml
 
+from .logging import get_logger
 from .models import CodecType
 from .patterns import MediaPatterns, get_patterns
 
@@ -62,8 +63,16 @@ class Config:
     @classmethod
     def from_file(cls, path: Path) -> Config:
         """Load configuration from YAML file."""
-        with open(path) as f:
-            data = yaml.safe_load(f) or {}
+        logger = get_logger("config")
+        logger.info(f"Loading configuration from {path}")
+
+        try:
+            with path.open("r", encoding="utf-8") as f:
+                data = yaml.safe_load(f) or {}
+            logger.debug(f"Successfully loaded config with keys: {list(data.keys())}")
+        except Exception as e:
+            logger.error(f"Failed to load configuration from {path}: {e}")
+            raise
 
         return cls.from_dict(data)
 
@@ -80,6 +89,8 @@ class Config:
                 try:
                     codecs.append(CodecType[codec_str.upper()])
                 except KeyError:
+                    logger = get_logger("config")
+                    logger.warning(f"Unknown codec type '{codec_str}', using OTHER")
                     codecs.append(CodecType.OTHER)
             scan_data["allowed_codecs"] = codecs
 

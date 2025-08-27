@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+from media_audit.logging import get_logger
 from media_audit.models import (
     EpisodeItem,
     MediaAssets,
@@ -21,15 +22,25 @@ from media_audit.models import (
 class JSONReportGenerator:
     """Generates JSON reports from scan results."""
 
+    def __init__(self) -> None:
+        """Initialize JSON report generator."""
+        self.logger = get_logger("report.json")
+
     def generate(self, result: ScanResult, output_path: Path) -> None:
         """Generate JSON report file."""
+        self.logger.info(f"Generating JSON report: {output_path}")
         data = self._serialize_result(result)
 
         # Ensure directory exists
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
-        with open(output_path, "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=2, default=str)
+        try:
+            with output_path.open("w", encoding="utf-8") as f:
+                json.dump(data, f, indent=2, default=str)
+            self.logger.debug(f"Successfully wrote JSON report to {output_path}")
+        except Exception as e:
+            self.logger.error(f"Failed to write JSON report: {e}")
+            raise
 
     def _serialize_result(self, result: ScanResult) -> dict[str, Any]:
         """Serialize scan result to dictionary."""

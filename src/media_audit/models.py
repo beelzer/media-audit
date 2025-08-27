@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum, auto
 from pathlib import Path
-from typing import Any
+from typing import Any, Self
 
 
 class MediaType(Enum):
@@ -16,6 +16,10 @@ class MediaType(Enum):
     TV_SERIES = auto()
     TV_SEASON = auto()
     TV_EPISODE = auto()
+
+    def __str__(self) -> str:
+        """Return readable string representation."""
+        return self.name.replace("_", " ").title()
 
 
 class ValidationStatus(Enum):
@@ -55,7 +59,7 @@ class VideoInfo:
 
     path: Path
     codec: CodecType | None = None
-    resolution: tuple[int, int] | None = None
+    resolution: tuple[int, int] | None = None  # (width, height)
     duration: float | None = None
     bitrate: int | None = None
     size: int = 0
@@ -96,7 +100,20 @@ class MediaItem:
     @property
     def has_issues(self) -> bool:
         """Check if item has any issues."""
-        return len(self.issues) > 0
+        return bool(self.issues)
+
+    def add_issue(
+        self,
+        category: str,
+        message: str,
+        severity: ValidationStatus = ValidationStatus.ERROR,
+        **details: Any,
+    ) -> Self:
+        """Add a validation issue to this item."""
+        self.issues.append(
+            ValidationIssue(category=category, message=message, severity=severity, details=details)
+        )
+        return self
 
 
 @dataclass

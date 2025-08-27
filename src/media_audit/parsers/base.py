@@ -6,6 +6,7 @@ import re
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from media_audit.logging import get_logger
 from media_audit.models import MediaAssets
 from media_audit.patterns import CompiledPatterns
 
@@ -23,6 +24,7 @@ class BaseParser:
         """Initialize parser with compiled patterns."""
         self.patterns = patterns
         self.cache = cache
+        self.logger = get_logger("parser")
 
     def is_video_file(self, path: Path) -> bool:
         """Check if file is a video."""
@@ -48,7 +50,8 @@ class BaseParser:
         try:
             rel_path = file_path.relative_to(base_path)
             filename = rel_path.as_posix()
-        except ValueError:
+        except ValueError as e:
+            self.logger.debug(f"Failed to get relative path for {file_path}: {e}")
             filename = file_path.name
 
         # Check patterns - only image files can be posters, backgrounds, banners, title cards

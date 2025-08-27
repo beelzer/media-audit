@@ -2,8 +2,9 @@
 
 [![CI](https://github.com/beelzer/media-audit/actions/workflows/ci.yml/badge.svg)](https://github.com/beelzer/media-audit/actions/workflows/ci.yml)
 [![Docs](https://github.com/beelzer/media-audit/actions/workflows/docs.yml/badge.svg)](https://github.com/beelzer/media-audit/actions/workflows/docs.yml)
+[![codecov](https://codecov.io/gh/beelzer/media-audit/graph/badge.svg)](https://codecov.io/gh/beelzer/media-audit)
 [![Python 3.13+](https://img.shields.io/badge/python-3.13+-blue.svg)](https://www.python.org/downloads/)
-[![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
+[![Style: Ruff](https://img.shields.io/badge/Style-Ruff-000000.svg)](https://github.com/astral-sh/ruff)
 [![Checked with mypy](https://img.shields.io/badge/mypy-checked-blue)](http://mypy-lang.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![uv](https://img.shields.io/badge/uv-managed-blue)](https://github.com/astral-sh/uv)
@@ -253,12 +254,37 @@ pytest tests/
 # Run with coverage
 pytest tests/ --cov=src/media_audit --cov-report=html
 
+# Run with coverage and generate multiple reports
+pytest tests/ --cov=src/media_audit --cov-report=term-missing --cov-report=html --cov-report=xml
+
 # Run specific test file
 pytest tests/test_scanner.py
 
 # Run with verbose output
 pytest tests/ -v
 ```
+
+### Code Coverage
+
+This project uses [Codecov](https://codecov.io) for tracking test coverage. Coverage reports are automatically generated during CI runs.
+
+To view local coverage:
+
+```bash
+# Generate HTML coverage report
+pytest tests/ --cov=src/media_audit --cov-report=html
+
+# Open coverage report in browser
+open htmlcov/index.html  # macOS
+xdg-open htmlcov/index.html  # Linux
+start htmlcov/index.html  # Windows
+```
+
+Coverage goals:
+
+- Overall project coverage: >80%
+- New code coverage: >80%
+- Critical modules (scanner, validator): >90%
 
 ### Code Quality
 

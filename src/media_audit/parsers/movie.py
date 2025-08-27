@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
+from typing import Any
 
+from media_audit.logging import get_logger
 from media_audit.models import MediaType, MovieItem, VideoInfo
 
 from .base import BaseParser
@@ -13,10 +15,18 @@ from .base import BaseParser
 class MovieParser(BaseParser):
     """Parser for movie content."""
 
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        """Initialize movie parser."""
+        super().__init__(*args, **kwargs)
+        self.logger = get_logger("parser.movie")
+
     def parse(self, directory: Path) -> MovieItem | None:
         """Parse a movie directory."""
         if not directory.is_dir():
+            self.logger.debug(f"Skipping non-directory: {directory}")
             return None
+
+        self.logger.debug(f"Parsing movie directory: {directory.name}")
 
         # Extract movie name and year
         folder_name = directory.name

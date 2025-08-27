@@ -11,6 +11,8 @@ from dataclasses import dataclass, fields
 from pathlib import Path
 from typing import Any, TypeVar
 
+from media_audit.logging import get_logger
+
 T = TypeVar("T")
 
 # Cache schema version - increment this when data structures change
@@ -41,9 +43,7 @@ def generate_schema_hash() -> str:
         MediaAssets,
         ValidationIssue,
     ]:
-        model_fields = []
-        for field in fields(model):
-            model_fields.append(f"{field.name}:{field.type}")
+        model_fields = [f"{field.name}:{field.type}" for field in fields(model)]
         schema_info.append(f"{model.__name__}:{','.join(sorted(model_fields))}")
 
     # Generate hash of the schema
@@ -70,6 +70,7 @@ class MediaCache:
     def __init__(self, cache_dir: Path | None = None, enabled: bool = True):
         """Initialize cache."""
         self.enabled = enabled
+        self.logger = get_logger("cache")
         if not enabled:
             return
 
@@ -105,15 +106,10 @@ class MediaCache:
                 stored_version = version_file.read_text().strip()
                 if stored_version != self.schema_version:
                     # Schema has changed, clear the cache
-                    from rich.console import Console
-
-                    console = Console()
-                    console.print(
-                        "[yellow]Cache schema changed, clearing old cache data...[/yellow]"
-                    )
+                    self.logger.warning("Cache schema changed, clearing old cache data...")
                     self.clear()
-            except Exception:
-                pass
+            except Exception as e:
+                self.logger.debug(f"Failed to load cache version: {e}")
 
         # Write current version
         with contextlib.suppress(Exception):
@@ -138,7 +134,8 @@ class MediaCache:
             stat = file_path.stat()
             # Check if file has been modified
             return not (stat.st_mtime != entry.file_mtime or stat.st_size != entry.file_size)
-        except OSError:
+        except OSError as e:
+            self.logger.debug(f"Failed to stat file {file_path}: {e}")
             return False
 
     def get_probe_data(self, file_path: Path) -> dict[str, Any] | None:

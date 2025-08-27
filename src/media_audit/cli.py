@@ -5,12 +5,14 @@ from __future__ import annotations
 import sys
 import webbrowser
 from pathlib import Path
+from typing import Any
 
 import click
 from rich.console import Console
 from rich.table import Table
 
 from .config import Config, ReportConfig, ScanConfig
+from .logging import setup_logger
 from .models import ScanResult, ValidationStatus
 from .report import HTMLReportGenerator, JSONReportGenerator
 from .scanner import MediaScanner
@@ -28,6 +30,22 @@ def cli(ctx: click.Context) -> None:
 
 
 @cli.command()
+@click.option(
+    "--verbose",
+    "-v",
+    is_flag=True,
+    help="Enable verbose logging",
+)
+@click.option(
+    "--debug",
+    is_flag=True,
+    help="Enable debug logging",
+)
+@click.option(
+    "--log-file",
+    type=click.Path(path_type=Path),
+    help="Log output to file",
+)
 @click.option(
     "--roots",
     "-r",
@@ -104,14 +122,17 @@ def cli(ctx: click.Context) -> None:
     help="Show only items with problems in report",
 )
 def scan(
-    roots: tuple[str],
-    profiles: tuple[str],
+    verbose: bool,
+    debug: bool,
+    log_file: Path | None,
+    roots: tuple[str, ...],
+    profiles: tuple[str, ...],
     report: Path | None,
     json: Path | None,
     auto_open: bool,
-    allow_codecs: tuple[str],
-    include: tuple[str],
-    exclude: tuple[str],
+    allow_codecs: tuple[str, ...],
+    include: tuple[str, ...],
+    exclude: tuple[str, ...],
     patterns: Path | None,
     config: Path | None,
     workers: int,
@@ -119,6 +140,17 @@ def scan(
     problems_only: bool,
 ) -> None:
     """Scan media libraries and generate reports."""
+    # Setup logging
+    import logging
+
+    log_level = logging.INFO
+    if debug:
+        log_level = logging.DEBUG
+    elif verbose:
+        log_level = logging.INFO
+
+    logger = setup_logger(level=log_level, log_file=log_file)
+    logger.info("Starting media audit scan")
 
     # Load configuration
     cfg = Config.from_file(config) if config else Config()
@@ -174,10 +206,10 @@ def scan(
     if patterns:
         import yaml
 
-        with open(patterns) as f:
-            pattern_data = yaml.safe_load(f)
-            from .patterns import MediaPatterns
+        from .patterns import MediaPatterns
 
+        with patterns.open("r", encoding="utf-8") as f:
+            pattern_data = yaml.safe_load(f)
             cfg.scan.patterns = MediaPatterns(**pattern_data)
 
     # Start scanning
@@ -235,6 +267,36 @@ def init_config(output: Path) -> None:
     console.print("\n[dim]Edit this file to customize your scan settings.[/dim]")
 
 
+def _count_issues_by_severity(result: ScanResult) -> tuple[int, int]:
+    """Count issues by severity level.
+
+    Returns:
+        Tuple of (error_count, warning_count)
+    """
+    error_count = 0
+    warning_count = 0
+
+    # Count all issues from all media items
+    all_items: list[Any] = []
+    all_items.extend(result.movies)
+    all_items.extend(result.series)
+
+    for series in result.series:
+        all_items.extend(series.seasons)
+        for season in series.seasons:
+            all_items.extend(season.episodes)
+
+    for item in all_items:
+        for issue in item.issues:
+            match issue.severity:
+                case ValidationStatus.ERROR:
+                    error_count += 1
+                case ValidationStatus.WARNING:
+                    warning_count += 1
+
+    return error_count, warning_count
+
+
 def _display_summary(result: ScanResult) -> None:
     """Display scan results summary."""
     # Create summary table
@@ -247,37 +309,8 @@ def _display_summary(result: ScanResult) -> None:
     table.add_row("TV Series", str(len(result.series)))
     table.add_row("Total Issues", str(result.total_issues))
 
-    # Count by severity
-    error_count = 0
-    warning_count = 0
-
-    for movie in result.movies:
-        for issue in movie.issues:
-            if issue.severity == ValidationStatus.ERROR:
-                error_count += 1
-            elif issue.severity == ValidationStatus.WARNING:
-                warning_count += 1
-
-    for series in result.series:
-        for issue in series.issues:
-            if issue.severity == ValidationStatus.ERROR:
-                error_count += 1
-            elif issue.severity == ValidationStatus.WARNING:
-                warning_count += 1
-
-        for season in series.seasons:
-            for issue in season.issues:
-                if issue.severity == ValidationStatus.ERROR:
-                    error_count += 1
-                elif issue.severity == ValidationStatus.WARNING:
-                    warning_count += 1
-
-            for episode in season.episodes:
-                for issue in episode.issues:
-                    if issue.severity == ValidationStatus.ERROR:
-                        error_count += 1
-                    elif issue.severity == ValidationStatus.WARNING:
-                        warning_count += 1
+    # Count by severity using a helper function
+    error_count, warning_count = _count_issues_by_severity(result)
 
     table.add_row("[red]Errors[/red]", f"[red]{error_count}[/red]")
     table.add_row("[yellow]Warnings[/yellow]", f"[yellow]{warning_count}[/yellow]")

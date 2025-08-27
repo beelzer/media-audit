@@ -6,6 +6,7 @@ import re
 from pathlib import Path
 from typing import Any
 
+from media_audit.logging import get_logger
 from media_audit.models import (
     EpisodeItem,
     MediaAssets,
@@ -21,11 +22,18 @@ from .base import BaseParser
 class TVParser(BaseParser):
     """Parser for TV show content."""
 
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        """Initialize TV parser."""
+        super().__init__(*args, **kwargs)
+        self.logger = get_logger("parser.tv")
+
     def parse(self, directory: Path) -> SeriesItem | None:
         """Parse a TV series directory."""
         if not directory.is_dir():
+            self.logger.debug(f"Skipping non-directory: {directory}")
             return None
 
+        self.logger.debug(f"Parsing TV series: {directory.name}")
         series_name = directory.name
 
         # Create series item
