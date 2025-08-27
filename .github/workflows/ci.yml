@@ -368,6 +368,43 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
 
   # ============================================================================
+  # 🧪 Python 3.14 Experimental Testing (Dead-end branch)
+  # ============================================================================
+
+  experimental-py314:
+    name: 🧪 Python 3.14 (Experimental)
+    needs: [quality-ruff-lint, quality-ruff-format, quality-mypy]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    continue-on-error: true  # Don't fail the whole CI if this fails
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🐍 Setup Python 3.14
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.14.0-alpha.1'
+          allow-prereleases: true
+
+      - name: 📦 Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: true
+          cache-dependency-glob: '**/pyproject.toml'
+
+      - name: 🔧 Install dependencies
+        run: uv sync --frozen --all-extras
+
+      - name: 🧪 Run tests
+        shell: bash
+        run: |
+          echo "::group::Test execution on Python 3.14"
+          uv run pytest tests/ -v || echo "::warning::Python 3.14 tests failed (experimental)"
+          echo "::endgroup::"
+
+  # ============================================================================
   # 🏗️ Build Verification
   # ============================================================================
 
@@ -414,42 +451,6 @@ jobs:
           name: distribution-packages
           path: dist/
           retention-days: 7
-
-  # ============================================================================
-  # 🧪 Python 3.14 Experimental Testing (Dead-end branch)
-  # ============================================================================
-
-  experimental-py314:
-    name: 🧪 Python 3.14 (Experimental)
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    continue-on-error: true  # Don't fail the whole CI if this fails
-    steps:
-      - name: 📥 Checkout code
-        uses: actions/checkout@v4
-
-      - name: 🐍 Setup Python 3.14
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.14.0-alpha.1'
-          allow-prereleases: true
-
-      - name: 📦 Install uv
-        uses: astral-sh/setup-uv@v3
-        with:
-          version: ${{ env.UV_VERSION }}
-          enable-cache: true
-          cache-dependency-glob: '**/pyproject.toml'
-
-      - name: 🔧 Install dependencies
-        run: uv sync --frozen --all-extras
-
-      - name: 🧪 Run tests
-        shell: bash
-        run: |
-          echo "::group::Test execution on Python 3.14"
-          uv run pytest tests/ -v || echo "::warning::Python 3.14 tests failed (experimental)"
-          echo "::endgroup::"
 
   # ============================================================================
   # 🎯 Pre-commit Validation
