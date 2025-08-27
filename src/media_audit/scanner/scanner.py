@@ -1,4 +1,27 @@
-"""Main media scanner implementation."""
+"""Main media scanner implementation.
+
+This module provides the core scanning functionality for media libraries,
+including parallel processing, progress tracking, and cancellation support.
+Integrates with parsers and validators to build a complete picture of the
+media library's structure and health.
+
+Key Features:
+    - Concurrent scanning with configurable worker threads
+    - Real-time progress tracking with Rich console output
+    - ESC key cancellation support
+    - Automatic media type detection
+    - Integrated caching for performance
+
+Example:
+    >>> from media_audit.config import ScanConfig
+    >>> from media_audit.scanner import MediaScanner
+    >>>
+    >>> config = ScanConfig(root_paths=[Path("/media")])
+    >>> scanner = MediaScanner(config)
+    >>> result = scanner.scan()
+    >>> print(f"Found {result.total_items} items with {result.total_issues} issues")
+
+"""
 
 from __future__ import annotations
 
@@ -25,10 +48,34 @@ from media_audit.validator import MediaValidator
 
 
 class MediaScanner:
-    """Scans media libraries and validates content."""
+    """Scans media libraries and validates content.
+
+    Main scanner class that coordinates the discovery, parsing, and validation
+    of media items. Supports concurrent processing and real-time progress updates.
+
+    Attributes:
+        config: Scan configuration settings
+        console: Rich console for output
+        logger: Logger instance for debugging
+        cache: Media cache for performance
+        movie_parser: Parser for movie content
+        tv_parser: Parser for TV series content
+        validator: Media validator instance
+
+    """
 
     def __init__(self, config: ScanConfig):
-        """Initialize scanner with configuration."""
+        """Initialize scanner with configuration.
+
+        Sets up parsers, validators, and cache based on the provided configuration.
+
+        Args:
+            config: Scan configuration with paths, patterns, and settings
+
+        Raises:
+            ValueError: If media patterns are not configured
+
+        """
         self.config = config
         self.console = Console()
         self.logger = get_logger("scanner")
@@ -49,7 +96,12 @@ class MediaScanner:
         self.validator = MediaValidator(config, cache=self.cache)
 
     def _check_for_esc(self) -> None:
-        """Monitor for ESC key press on Windows."""
+        """Monitor for ESC key press to allow scan cancellation.
+
+        Runs in a separate thread to detect ESC key presses. Supports both
+        Windows (using msvcrt) and Unix-like systems (using termios).
+        Sets the _cancelled flag when ESC is pressed.
+        """
         if sys.platform == "win32":
             import msvcrt
 
@@ -91,12 +143,34 @@ class MediaScanner:
                 pass
 
     def is_cancelled(self) -> bool:
-        """Check if scan has been cancelled."""
+        """Check if scan has been cancelled.
+
+        Thread-safe check of cancellation status.
+
+        Returns:
+            bool: True if scan was cancelled by user
+
+        """
         with self._cancel_lock:
             return self._cancelled
 
     def scan(self) -> ScanResult:
-        """Scan all configured root paths."""
+        """Scan all configured root paths for media content.
+
+        Main entry point for scanning. Discovers media files, parses metadata,
+        validates content, and aggregates results. Supports cancellation via ESC key.
+
+        Returns:
+            ScanResult: Complete scan results including found media and issues
+
+        Example:
+            >>> scanner = MediaScanner(config)
+            >>> result = scanner.scan()
+            >>> for movie in result.movies:
+            ...     if movie.has_issues:
+            ...         print(f"{movie.name}: {len(movie.issues)} issues")
+
+        """
         start_time = time.time()
         scan_time = datetime.now()
         self._cancelled = False
@@ -153,7 +227,18 @@ class MediaScanner:
         return result
 
     def _scan_path(self, path: Path, result: ScanResult, progress: Progress | None = None) -> None:
-        """Scan a single path for media content."""
+        """Scan a single root path for media content.
+
+        Looks for standard media directories (Movies, TV Shows) and processes
+        their contents. Falls back to mixed content scanning if standard
+        directories are not found.
+
+        Args:
+            path: Root path to scan
+            result: ScanResult object to populate
+            progress: Optional progress tracker for UI updates
+
+        """
         # Look for Movies and TV directories
         movies_dir = path / "Movies"
         tv_dir = path / "TV Shows"
@@ -183,7 +268,18 @@ class MediaScanner:
         progress: Progress | None = None,
         force_type: str | None = None,
     ) -> None:
-        """Scan a movies directory."""
+        """Scan a directory containing movies.
+
+        Processes each subdirectory as a potential movie, using concurrent
+        workers if configured. Updates progress in real-time.
+
+        Args:
+            movies_dir: Directory containing movie folders
+            result: ScanResult to populate with found movies
+            progress: Optional progress tracker
+            force_type: Force content type (unused, for consistency)
+
+        """
         movie_dirs = [d for d in movies_dir.iterdir() if d.is_dir() and not d.name.startswith(".")]
         total_movies = len(movie_dirs)
 
@@ -254,7 +350,19 @@ class MediaScanner:
         progress: Progress | None = None,
         force_type: str | None = None,
     ) -> None:
-        """Scan a TV shows directory."""
+        """Scan a directory containing TV series.
+
+        Processes each subdirectory as a potential TV series, with support
+        for concurrent processing. Each series is parsed with its complete
+        season and episode hierarchy.
+
+        Args:
+            tv_dir: Directory containing TV series folders
+            result: ScanResult to populate with found series
+            progress: Optional progress tracker
+            force_type: Force content type (unused, for consistency)
+
+        """
         series_dirs = [d for d in tv_dir.iterdir() if d.is_dir() and not d.name.startswith(".")]
         total_series = len(series_dirs)
 
@@ -321,7 +429,18 @@ class MediaScanner:
     def _scan_mixed_content(
         self, path: Path, result: ScanResult, progress: Progress | None = None
     ) -> None:
-        """Scan a directory that might contain both movies and TV shows."""
+        """Scan a directory that might contain both movies and TV shows.
+
+        Analyzes each subdirectory to determine if it's a movie or TV series
+        based on content structure. TV series are detected by presence of
+        season folders.
+
+        Args:
+            path: Directory to scan for mixed content
+            result: ScanResult to populate
+            progress: Optional progress tracker
+
+        """
         items = [item for item in path.iterdir() if item.is_dir() and not item.name.startswith(".")]
         total_items = len(items)
 
@@ -372,7 +491,17 @@ class MediaScanner:
                     progress.update(mixed_task, advance=1)
 
     def _process_movie(self, directory: Path) -> MovieItem | None:
-        """Process a single movie directory."""
+        """Process a single movie directory.
+
+        Parses movie metadata and runs validation checks.
+
+        Args:
+            directory: Path to movie directory
+
+        Returns:
+            MovieItem: Parsed and validated movie, or None if parsing failed
+
+        """
         try:
             movie = self.movie_parser.parse(directory)
             if movie:
@@ -384,7 +513,18 @@ class MediaScanner:
             return None
 
     def _process_series(self, directory: Path) -> SeriesItem | None:
-        """Process a single TV series directory."""
+        """Process a single TV series directory.
+
+        Parses series structure including all seasons and episodes,
+        then runs validation checks.
+
+        Args:
+            directory: Path to series directory
+
+        Returns:
+            SeriesItem: Parsed and validated series, or None if parsing failed
+
+        """
         try:
             series = self.tv_parser.parse(directory)
             if series:

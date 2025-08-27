@@ -1,4 +1,25 @@
-"""Media validation logic."""
+"""Media validation logic.
+
+Provides comprehensive validation for media items, checking for missing assets,
+encoding issues, and structural problems. Integrates with the scanning pipeline
+to identify and categorize issues.
+
+Validation Categories:
+    - Assets: Missing artwork, trailers, subtitles
+    - Encoding: Non-optimal codecs, resolution issues
+    - Structure: Missing episodes, naming problems
+    - Metadata: Missing or incorrect metadata
+
+Example:
+    >>> from media_audit.validator import MediaValidator
+    >>> from media_audit.config import ScanConfig
+    >>>
+    >>> config = ScanConfig(allowed_codecs=[CodecType.HEVC, CodecType.AV1])
+    >>> validator = MediaValidator(config)
+    >>> validator.validate(movie_item)
+    >>> print(f"Found {len(movie_item.issues)} issues")
+
+"""
 
 from __future__ import annotations
 
@@ -22,17 +43,42 @@ from .probe import probe_video
 
 
 class MediaValidator:
-    """Validates media items against configured rules."""
+    """Validates media items against configured rules.
+
+    Applies validation rules based on configuration to identify issues
+    with media files, organization, and metadata.
+
+    Attributes:
+        config: Scan configuration with validation rules
+        allowed_codecs: Set of acceptable video codecs
+        cache: Optional cache for probe results
+        logger: Logger for debug output
+
+    """
 
     def __init__(self, config: ScanConfig, cache: Any = None) -> None:
-        """Initialize validator with configuration."""
+        """Initialize validator with configuration.
+
+        Args:
+            config: Scan configuration with validation rules
+            cache: Optional MediaCache instance for probe caching
+
+        """
         self.config = config
         self.allowed_codecs = set(config.allowed_codecs)
         self.cache = cache
         self.logger = get_logger("validator")
 
     def validate(self, item: MediaItem) -> None:
-        """Validate a media item and add issues."""
+        """Validate a media item and add issues.
+
+        Dispatches to appropriate validation method based on item type.
+        Issues are added directly to the item's issues list.
+
+        Args:
+            item: Media item to validate (movie, series, season, or episode)
+
+        """
         if isinstance(item, MovieItem):
             self.validate_movie(item)
         elif isinstance(item, SeriesItem):
@@ -43,7 +89,18 @@ class MediaValidator:
             self.validate_episode(item)
 
     def validate_movie(self, movie: MovieItem) -> None:
-        """Validate a movie."""
+        """Validate a movie for required assets and encoding.
+
+        Checks for:
+        - Poster and background images
+        - Trailer files
+        - Video encoding compliance
+        - File presence
+
+        Args:
+            movie: Movie item to validate
+
+        """
         self.logger.debug(f"Validating movie: {movie.name}")
         # Check for required assets
         if not movie.assets.posters:
@@ -89,7 +146,16 @@ class MediaValidator:
             )
 
     def validate_series(self, series: SeriesItem) -> None:
-        """Validate a TV series."""
+        """Validate a TV series and all its seasons.
+
+        Checks for:
+        - Series-level artwork (poster, background, banner)
+        - Recursively validates all seasons
+
+        Args:
+            series: Series item to validate
+
+        """
         self.logger.debug(f"Validating series: {series.name}")
         # Check for series-level assets
         if not series.assets.posters:
@@ -128,7 +194,16 @@ class MediaValidator:
             self.validate_season(season)
 
     def validate_season(self, season: SeasonItem) -> None:
-        """Validate a TV season."""
+        """Validate a TV season and all its episodes.
+
+        Checks for:
+        - Season poster
+        - Recursively validates all episodes
+
+        Args:
+            season: Season item to validate
+
+        """
         # Check for season poster
         if not season.assets.posters:
             season.issues.append(
@@ -145,7 +220,17 @@ class MediaValidator:
             self.validate_episode(episode)
 
     def validate_episode(self, episode: EpisodeItem) -> None:
-        """Validate a TV episode."""
+        """Validate a TV episode.
+
+        Checks for:
+        - Title card/thumbnail
+        - Video file presence
+        - Video encoding compliance
+
+        Args:
+            episode: Episode item to validate
+
+        """
         # Check for title card
         if not episode.assets.title_cards:
             episode.issues.append(
@@ -174,7 +259,16 @@ class MediaValidator:
             )
 
     def _validate_video_encoding(self, item: MediaItem, video_info: VideoInfo) -> None:
-        """Validate video encoding."""
+        """Validate video encoding against configured rules.
+
+        Probes video file if needed and checks codec compliance.
+        Adds warnings for legacy codecs and suggestions for re-encoding.
+
+        Args:
+            item: Media item containing the video
+            video_info: Video information to validate
+
+        """
         # Probe video if not already done
         if video_info.codec is None:
             try:
@@ -224,7 +318,15 @@ class MediaValidator:
                 )
 
     def _has_trailer_folder(self, path: Path) -> bool:
-        """Check if path has a Trailers folder."""
+        """Check if path has a Trailers folder with video files.
+
+        Args:
+            path: Directory to check
+
+        Returns:
+            bool: True if Trailers folder exists with video files
+
+        """
         trailer_folder = path / "Trailers"
         if trailer_folder.exists() and trailer_folder.is_dir():
             # Check if it contains video files

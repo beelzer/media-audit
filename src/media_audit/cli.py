@@ -272,6 +272,7 @@ def _count_issues_by_severity(result: ScanResult) -> tuple[int, int]:
 
     Returns:
         Tuple of (error_count, warning_count)
+
     """
     error_count = 0
     warning_count = 0

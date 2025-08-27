@@ -26,6 +26,7 @@ def setup_logger(
 
     Returns:
         Configured logger instance
+
     """
     logger = logging.getLogger(name)
     logger.setLevel(level)
@@ -68,6 +69,7 @@ def get_logger(name: str | None = None) -> Logger:
 
     Returns:
         Logger instance
+
     """
     if name:
         return logging.getLogger(f"media_audit.{name}")

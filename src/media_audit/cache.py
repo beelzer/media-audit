@@ -1,4 +1,30 @@
-"""Caching system for media scan results."""
+"""Caching system for media scan results.
+
+Provides persistent caching for ffprobe results and media scan data to improve
+performance when re-scanning libraries. Implements both in-memory and disk-based
+caching with automatic invalidation on file changes.
+
+Key Features:
+    - Separate caches for probe data and scan results
+    - Automatic schema versioning and migration
+    - File modification time tracking for invalidation
+    - In-memory cache for current session
+    - Cache statistics tracking
+
+Example:
+    >>> from media_audit.cache import MediaCache
+    >>> cache = MediaCache(enabled=True)
+    >>>
+    >>> # Cache probe data
+    >>> probe_data = expensive_ffprobe_operation(video_file)
+    >>> cache.set_probe_data(video_file, probe_data)
+    >>>
+    >>> # Retrieve cached data
+    >>> cached = cache.get_probe_data(video_file)
+    >>> if cached:
+    ...     print("Cache hit!")
+
+"""
 
 from __future__ import annotations
 
@@ -21,7 +47,15 @@ CACHE_SCHEMA_VERSION = "2.0.0"
 
 
 def generate_schema_hash() -> str:
-    """Generate a hash of the current model schemas."""
+    """Generate a hash of the current model schemas.
+
+    Creates a unique hash based on the structure of all data models.
+    Used to detect when models change and cache needs to be invalidated.
+
+    Returns:
+        str: 8-character hash of model schemas
+
+    """
     from media_audit.models import (
         EpisodeItem,
         MediaAssets,
@@ -53,7 +87,21 @@ def generate_schema_hash() -> str:
 
 @dataclass
 class CacheEntry:
-    """Cache entry with metadata."""
+    """Cache entry with metadata for validation.
+
+    Stores cached data along with file metadata to determine if the
+    cache is still valid.
+
+    Attributes:
+        key: Unique cache key
+        data: Cached data (any serializable type)
+        file_path: Path to the original file
+        file_size: Size of file when cached
+        file_mtime: Modification time when cached
+        cache_time: Timestamp when cached
+        schema_version: Model schema version for compatibility
+
+    """
 
     key: str
     data: Any
@@ -65,10 +113,32 @@ class CacheEntry:
 
 
 class MediaCache:
-    """Cache for media scan results."""
+    """Cache for media scan results and probe data.
+
+    Manages persistent caching with automatic invalidation based on file
+    changes and schema versions. Provides separate storage for different
+    cache types and tracks hit/miss statistics.
+
+    Attributes:
+        enabled: Whether caching is active
+        cache_dir: Root cache directory
+        schema_version: Current model schema hash
+        hits: Number of cache hits
+        misses: Number of cache misses
+
+    """
 
     def __init__(self, cache_dir: Path | None = None, enabled: bool = True):
-        """Initialize cache."""
+        """Initialize cache system.
+
+        Sets up cache directories and checks for schema changes that would
+        require cache invalidation.
+
+        Args:
+            cache_dir: Custom cache directory (defaults to ~/.cache/media-audit)
+            enabled: Whether to enable caching
+
+        """
         self.enabled = enabled
         self.logger = get_logger("cache")
         if not enabled:
@@ -98,7 +168,11 @@ class MediaCache:
         self.misses = 0
 
     def _check_and_migrate_cache(self) -> None:
-        """Check cache version and clear if schema has changed."""
+        """Check cache version and clear if schema has changed.
+
+        Compares stored schema version with current version and clears
+        the cache if they don't match, preventing deserialization errors.
+        """
         version_file = self.cache_dir / "schema_version.txt"
 
         if version_file.exists():
@@ -116,13 +190,34 @@ class MediaCache:
             version_file.write_text(self.schema_version)
 
     def _get_file_key(self, file_path: Path, prefix: str = "") -> str:
-        """Generate cache key for file."""
+        """Generate unique cache key for a file.
+
+        Args:
+            file_path: Path to file
+            prefix: Optional prefix for key namespacing
+
+        Returns:
+            str: MD5 hash key for cache lookup
+
+        """
         # Use path and prefix to create unique key
         key_str = f"{prefix}:{file_path.absolute()}"
         return hashlib.md5(key_str.encode(), usedforsecurity=False).hexdigest()
 
     def _is_cache_valid(self, entry: CacheEntry, file_path: Path) -> bool:
-        """Check if cache entry is still valid."""
+        """Check if cache entry is still valid.
+
+        Validates cache based on file existence, modification time,
+        size, and schema version.
+
+        Args:
+            entry: Cache entry to validate
+            file_path: Current file path
+
+        Returns:
+            bool: True if cache is still valid
+
+        """
         if not file_path.exists():
             return False
 
@@ -139,7 +234,18 @@ class MediaCache:
             return False
 
     def get_probe_data(self, file_path: Path) -> dict[str, Any] | None:
-        """Get cached ffprobe data for video file."""
+        """Get cached ffprobe data for video file.
+
+        Checks memory cache first, then disk cache. Validates cache
+        before returning.
+
+        Args:
+            file_path: Path to video file
+
+        Returns:
+            dict[str, Any] | None: Cached probe data or None if not found/invalid
+
+        """
         if not self.enabled:
             return None
 
@@ -170,7 +276,15 @@ class MediaCache:
         return None
 
     def set_probe_data(self, file_path: Path, data: dict[str, Any]) -> None:
-        """Cache ffprobe data for video file."""
+        """Cache ffprobe data for video file.
+
+        Stores data in both memory and disk cache.
+
+        Args:
+            file_path: Path to video file
+            data: Probe data to cache
+
+        """
         if not self.enabled:
             return
 
@@ -305,7 +419,11 @@ class MediaCache:
             return False
 
     def clear(self) -> None:
-        """Clear all cache."""
+        """Clear all cached data.
+
+        Removes both memory and disk cache entries. Used when schema
+        changes or for manual cache clearing.
+        """
         if not self.enabled:
             return
 
@@ -321,7 +439,13 @@ class MediaCache:
                 cache_file.unlink()
 
     def get_stats(self) -> dict[str, Any]:
-        """Get cache statistics."""
+        """Get cache performance statistics.
+
+        Returns:
+            dict[str, Any]: Statistics including hits, misses, hit rate,
+                          and cache file counts
+
+        """
         total = self.hits + self.misses
         hit_rate = (self.hits / total * 100) if total > 0 else 0
 

@@ -53,7 +53,24 @@ class CodecType(StrEnum):
 
     @classmethod
     def from_string(cls, codec_str: str) -> CodecType:
-        """Create CodecType from string using match/case."""
+        """Create CodecType from codec string using pattern matching.
+
+        Converts various codec string representations to the appropriate enum value.
+        Handles common aliases and variations.
+
+        Args:
+            codec_str: String representation of codec (e.g., "hevc", "h265", "x265")
+
+        Returns:
+            CodecType: Corresponding codec enum value, UNKNOWN if not recognized
+
+        Example:
+            >>> CodecType.from_string("x265")
+            CodecType.HEVC
+            >>> CodecType.from_string("unknown_codec")
+            CodecType.UNKNOWN
+
+        """
         if not codec_str:
             return cls.UNKNOWN
 
@@ -226,7 +243,29 @@ class MediaItem:
 
 @dataclass
 class MovieItem(MediaItem):
-    """Represents a movie."""
+    """Represents a movie in the media library.
+
+    Extends MediaItem with movie-specific attributes like year, codecs,
+    and technical information. Tracks both metadata and validation state.
+
+    Attributes:
+        year: Release year of the movie
+        imdb_id: IMDb identifier (e.g., "tt0468569")
+        tmdb_id: The Movie Database identifier
+        quality: Quality designation (e.g., "1080p", "4K")
+        source: Media source (e.g., "BluRay", "WEB-DL")
+        release_group: Release group name
+        codec: Video codec type
+        resolution: Display resolution string
+        size_gb: File size in gigabytes
+        duration_mins: Duration in minutes
+        bitrate: Video bitrate in bps
+        audio_codec: Audio codec name
+        audio_channels: Audio channel configuration
+        has_subtitles: Whether subtitles are present
+        video_info: Detailed video metadata
+
+    """
 
     year: int | None = None
     imdb_id: str | None = None
@@ -271,7 +310,25 @@ class MovieItem(MediaItem):
 
 @dataclass
 class EpisodeItem(MediaItem):
-    """Represents a TV episode."""
+    """Represents a single TV episode.
+
+    Contains episode-specific information including season/episode numbers,
+    title, and technical details. Part of the series/season hierarchy.
+
+    Attributes:
+        season_number: Season number (0 for specials)
+        episode_number: Episode number within the season
+        episode_title: Episode title if available
+        quality: Video quality (e.g., "720p", "1080p")
+        source: Media source (e.g., "HDTV", "WEB-DL")
+        release_group: Release group name
+        codec: Video codec type
+        resolution: Display resolution string
+        size_gb: File size in gigabytes
+        duration_mins: Duration in minutes
+        video_info: Detailed video metadata
+
+    """
 
     season_number: int | None = None
     episode_number: int | None = None
@@ -292,7 +349,17 @@ class EpisodeItem(MediaItem):
 
     @property
     def episode_code(self) -> str:
-        """Get episode code like S01E01."""
+        """Generate standard episode code.
+
+        Returns:
+            str: Episode code in SxxExx format (e.g., "S01E01") or "Unknown"
+
+        Example:
+            >>> episode = EpisodeItem(..., season_number=1, episode_number=5)
+            >>> episode.episode_code
+            'S01E05'
+
+        """
         if self.season_number is not None and self.episode_number is not None:
             return f"S{self.season_number:02d}E{self.episode_number:02d}"
         return "Unknown"
@@ -317,7 +384,16 @@ class EpisodeItem(MediaItem):
 
 @dataclass
 class SeasonItem(MediaItem):
-    """Represents a TV season."""
+    """Represents a TV season containing episodes.
+
+    Container for episodes within a TV series. Aggregates validation
+    status from all contained episodes.
+
+    Attributes:
+        season_number: Season number (0 for specials)
+        episodes: List of episodes in this season
+
+    """
 
     season_number: int | None = None
     episodes: list[EpisodeItem] = field(default_factory=list)
@@ -329,7 +405,12 @@ class SeasonItem(MediaItem):
 
     @property
     def episode_count(self) -> int:
-        """Get number of episodes in season."""
+        """Get number of episodes in this season.
+
+        Returns:
+            int: Count of episodes
+
+        """
         return len(self.episodes)
 
     @property
@@ -367,7 +448,27 @@ class SeasonItem(MediaItem):
 
 @dataclass
 class SeriesItem(MediaItem):
-    """Represents a TV series."""
+    """Represents a complete TV series.
+
+    Top-level container for TV content, containing seasons which contain
+    episodes. Tracks series-wide metadata and aggregates validation status.
+
+    Attributes:
+        seasons: List of seasons in the series
+        imdb_id: IMDb identifier
+        tvdb_id: TheTVDB identifier
+        tmdb_id: The Movie Database identifier
+        total_episodes: Total episode count across all seasons
+        expected_episodes: Expected number of episodes if known
+        missing_episodes: List of missing episode identifiers
+        codec: Primary codec if consistent
+        mixed_codecs: Whether multiple codecs are used
+        codec_list: List of all codecs found
+        resolution: Primary resolution if consistent
+        min_episode_resolution: Lowest resolution found
+        total_size_gb: Total size of all episodes in GB
+
+    """
 
     seasons: list[SeasonItem] = field(default_factory=list)
     imdb_id: str | None = None
@@ -389,7 +490,11 @@ class SeriesItem(MediaItem):
             self.type = MediaType.TV_SERIES
 
     def update_episode_count(self) -> None:
-        """Update total episode count from seasons."""
+        """Recalculate total episode count from all seasons.
+
+        Updates the total_episodes attribute by summing episodes
+        across all seasons.
+        """
         self.total_episodes = sum(season.episode_count for season in self.seasons)
 
     @property
@@ -435,7 +540,22 @@ class SeriesItem(MediaItem):
 
 @dataclass
 class ScanResult:
-    """Results from a media library scan."""
+    """Complete results from a media library scan.
+
+    Aggregates all discovered media items, validation issues, and scan
+    metadata. Used for report generation and result analysis.
+
+    Attributes:
+        scan_time: Timestamp when scan started
+        duration: Total scan duration in seconds
+        root_paths: List of root directories scanned
+        movies: List of discovered movies
+        series: List of discovered TV series
+        errors: List of scan errors encountered
+        total_items: Total count of media items found
+        total_issues: Total count of validation issues
+
+    """
 
     scan_time: datetime | None
     duration: float
@@ -447,7 +567,11 @@ class ScanResult:
     total_issues: int = 0
 
     def update_stats(self) -> None:
-        """Update statistics using list comprehensions."""
+        """Recalculate scan statistics.
+
+        Updates total_items and total_issues counts based on current
+        movies and series lists. Should be called after scan completion.
+        """
         self.total_items = len(self.movies) + len(self.series)
 
         # Using nested comprehensions for issue counting
@@ -460,7 +584,13 @@ class ScanResult:
                 self.total_issues += sum(len(ep.issues) for ep in season.episodes)
 
     def get_items_with_issues(self) -> list[MediaItem]:
-        """Get all items that have validation issues."""
+        """Get all media items that have validation issues.
+
+        Returns:
+            list[MediaItem]: List of items with at least one issue,
+                           including movies, series, seasons, and episodes
+
+        """
         items_with_issues: list[MediaItem] = []
 
         # Use list comprehension with filtering
