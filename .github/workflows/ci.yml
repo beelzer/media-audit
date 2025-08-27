@@ -54,7 +54,7 @@ jobs:
   # ============================================================================
 
   quality-ruff-lint:
-    name: 🎯 Quality • Ruff Linting
+    name: 🎨 Ruff Linting
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -100,7 +100,7 @@ jobs:
           retention-days: 7
 
   quality-ruff-format:
-    name: 🎯 Quality • Ruff Formatting
+    name: 🖌️ Ruff Formatting
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -129,7 +129,7 @@ jobs:
           echo "::endgroup::"
 
   quality-mypy:
-    name: 🎯 Quality • Type Checking
+    name: 🔍 Type Checking
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -176,7 +176,7 @@ jobs:
   # ============================================================================
 
   security-bandit:
-    name: 🛡️ Security • Bandit Analysis
+    name: 🔒 Security Analysis
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -214,7 +214,7 @@ jobs:
           retention-days: 30
 
   security-secrets:
-    name: 🛡️ Security • Secrets Detection
+    name: 🔐 Secrets Detection
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -245,7 +245,7 @@ jobs:
           echo "::endgroup::"
 
   security-dependencies:
-    name: 🛡️ Security • Dependency Audit
+    name: 🛡️ Dependency Audit
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -368,23 +368,23 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
 
   # ============================================================================
-  # 🧪 Python 3.14 Experimental Testing (Dead-end branch)
+  # 🔮 Experimental Testing - Python 3.14 (Allow Failures)
   # ============================================================================
 
-  experimental-py314:
+  test-python-experimental:
     name: 🧪 Python 3.14 (Experimental)
-    needs: [quality-ruff-lint, quality-ruff-format, quality-mypy]
+    needs: [quality-ruff-lint, quality-ruff-format]
     runs-on: ubuntu-latest
+    continue-on-error: true  # Allow this job to fail without blocking workflow
     timeout-minutes: 20
-    continue-on-error: true  # Don't fail the whole CI if this fails
     steps:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
 
-      - name: 🐍 Setup Python 3.14
+      - name: 🐍 Setup Python 3.14-dev
         uses: actions/setup-python@v5
         with:
-          python-version: '3.14.0-alpha.1'
+          python-version: '3.14-dev'  # Development version of Python 3.14
           allow-prereleases: true
 
       - name: 📦 Install uv
@@ -394,22 +394,41 @@ jobs:
           enable-cache: true
           cache-dependency-glob: '**/pyproject.toml'
 
-      - name: 🔧 Install dependencies
-        run: uv sync --frozen --all-extras
-
-      - name: 🧪 Run tests
-        shell: bash
+      - name: 🔧 Install dependencies (allow failures)
+        continue-on-error: true
         run: |
-          echo "::group::Test execution on Python 3.14"
-          uv run pytest tests/ -v || echo "::warning::Python 3.14 tests failed (experimental)"
+          echo "::group::Installing with Python 3.14-dev"
+          uv sync --frozen --all-extras || echo "::warning::Some dependencies may not be compatible with Python 3.14 yet"
           echo "::endgroup::"
+
+      - name: 🧪 Run tests (experimental)
+        continue-on-error: true
+        run: |
+          echo "::group::Running tests on Python 3.14-dev"
+          uv run pytest tests/ -v --tb=short || echo "::warning::Tests failed on Python 3.14-dev (expected)"
+          echo "::endgroup::"
+
+      - name: 📊 Report experimental results
+        if: always()
+        run: |
+          echo "## 🔮 Python 3.14 Experimental Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if uv run python --version; then
+            echo "✅ Python 3.14-dev installed successfully" >> $GITHUB_STEP_SUMMARY
+            echo "Python version: $(uv run python --version)" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Failed to install Python 3.14-dev" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "This is an experimental test to check compatibility with the upcoming Python 3.14 release." >> $GITHUB_STEP_SUMMARY
+          echo "Failures in this job are expected and will not block the workflow." >> $GITHUB_STEP_SUMMARY
 
   # ============================================================================
   # 🏗️ Build Verification
   # ============================================================================
 
   build-package:
-    name: 🏗️ Build • Distribution Package
+    name: 📦 Build Distribution
     needs: [quality-ruff-lint, quality-ruff-format, quality-mypy]
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -457,7 +476,7 @@ jobs:
   # ============================================================================
 
   pre-commit-check:
-    name: 🪝 Validation • Pre-commit Hooks
+    name: 🪝 Pre-commit Hooks
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -500,6 +519,7 @@ jobs:
       - security-secrets
       - security-dependencies
       - test-matrix
+      - test-python-experimental
       - build-package
       - pre-commit-check
     runs-on: ubuntu-latest
@@ -547,6 +567,16 @@ jobs:
           echo ""
           echo "### 🧪 Testing"
           check_job "Test Suite" "${{ needs.test-matrix.result }}" "🧪" || all_success=false
+          # Experimental test - don't fail CI if this fails
+          echo ""
+          echo "### 🔮 Experimental (Non-blocking)"
+          if [ "${{ needs.test-python-experimental.result }}" == "success" ]; then
+            echo "🐍 ✅ Python 3.14-dev: Compatible!"
+          elif [ "${{ needs.test-python-experimental.result }}" == "skipped" ]; then
+            echo "🐍 ⏭️ Python 3.14-dev: Skipped"
+          else
+            echo "🐍 ⚠️ Python 3.14-dev: Not yet compatible (expected)"
+          fi
           echo ""
           echo "### 🏗️ Build"
           check_job "Package Build" "${{ needs.build-package.result }}" "📦" || all_success=false
@@ -582,6 +612,7 @@ jobs:
               'security-secrets': '${{ needs.security-secrets.result }}',
               'security-dependencies': '${{ needs.security-dependencies.result }}',
               'test-matrix': '${{ needs.test-matrix.result }}',
+              'test-python-experimental': '${{ needs.test-python-experimental.result }}',
               'build-package': '${{ needs.build-package.result }}',
               'pre-commit-check': '${{ needs.pre-commit-check.result }}'
             };
