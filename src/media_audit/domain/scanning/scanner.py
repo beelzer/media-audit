@@ -306,9 +306,6 @@ class MediaScanner:
                 MovieItem | None: Processed movie item or None if failed
             """
             async with semaphore:
-                # Check if cancelled before processing
-                if self.is_cancelled():
-                    return None
                 return await self._process_movie(movie_dir)
 
         tasks = []
@@ -411,9 +408,6 @@ class MediaScanner:
                 SeriesItem | None: Processed series item or None if failed
             """
             async with semaphore:
-                # Check if cancelled before processing
-                if self.is_cancelled():
-                    return None
                 return await self._process_series(series_dir)
 
         tasks = []
@@ -510,10 +504,6 @@ class MediaScanner:
                 tuple: Media type ('movie' or 'tv') and processed item or None
             """
             async with semaphore:
-                # Check cancellation before processing
-                if self.is_cancelled():
-                    return ("unknown", None)
-
                 if self.tv_parser.is_tv_directory(item):
                     series = await self._process_series(item)
                     return ("series", series)
@@ -599,16 +589,12 @@ class MediaScanner:
             MovieItem: Parsed and validated movie, or None if parsing failed
 
         """
-        # Check if cancelled before processing
-        if self.is_cancelled():
-            return None
-
         try:
             movie = await self.movie_parser.parse(directory)
-            if movie and not self.is_cancelled():
+            if movie:
                 await self.validator.validate_movie(movie)
                 self.logger.debug(f"Processed movie: {movie.name}")
-            return movie if not self.is_cancelled() else None
+            return movie
         except Exception as e:
             self.logger.error(f"Failed to process movie {directory}: {e}")
             return None
@@ -626,16 +612,12 @@ class MediaScanner:
             SeriesItem: Parsed and validated series, or None if parsing failed
 
         """
-        # Check if cancelled before processing
-        if self.is_cancelled():
-            return None
-
         try:
             series = await self.tv_parser.parse(directory)
-            if series and not self.is_cancelled():
+            if series:
                 await self.validator.validate_series(series)
                 self.logger.debug(f"Processed series: {series.name}")
-            return series if not self.is_cancelled() else None
+            return series
         except Exception as e:
             self.logger.error(f"Failed to process series {directory}: {e}")
             return None
