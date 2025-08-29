@@ -318,19 +318,13 @@ jobs:
           enable-cache: true
           cache-dependency-glob: '**/pyproject.toml'
 
-      - name: 🎥 Install FFmpeg (Linux/macOS)
-        if: runner.os != 'Windows'
-        run: |
-          if [ "$RUNNER_OS" == "Linux" ]; then
-            sudo apt-get update && sudo apt-get install -y ffmpeg
-          elif [ "$RUNNER_OS" == "macOS" ]; then
-            brew install ffmpeg
-          fi
-
-      - name: 🎥 Install FFmpeg (Windows)
-        if: runner.os == 'Windows'
-        run: |
-          choco install ffmpeg -y
+      - name: 🎥 Setup FFmpeg
+        uses: FedericoCarboni/setup-ffmpeg@v3
+        id: setup-ffmpeg
+        with:
+          ffmpeg-version: release
+          architecture: ''  # Use default for platform
+          github-token: ${{ github.token }}
 
       - name: 🔧 Install dependencies
         run: uv sync --frozen --all-extras
@@ -407,6 +401,12 @@ jobs:
           version: ${{ env.UV_VERSION }}
           enable-cache: true
           cache-dependency-glob: '**/pyproject.toml'
+
+      - name: 🎥 Setup FFmpeg
+        uses: FedericoCarboni/setup-ffmpeg@v3
+        with:
+          ffmpeg-version: release
+          github-token: ${{ github.token }}
 
       - name: 🔧 Install dependencies
         run: uv sync --frozen --all-extras
