@@ -50,7 +50,7 @@ class Scanner:
     def progress(self):
         """Lazy-load progress tracker component."""
         if self._progress is None:
-            from .progress_multi import ProgressTracker
+            from .progress import ProgressTracker
 
             self._progress = ProgressTracker(self.config)
         return self._progress

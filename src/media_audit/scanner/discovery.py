@@ -158,9 +158,12 @@ class PathDiscovery:
         # Check subdirectories for movies (e.g., Movie/Movie.mkv structure)
         if hint == "movie" or hint is None:
             for subdir in path.iterdir():
-                if subdir.is_dir() and not subdir.name.startswith("."):
-                    if self._has_video_files(subdir):
-                        return True
+                if (
+                    subdir.is_dir()
+                    and not subdir.name.startswith(".")
+                    and self._has_video_files(subdir)
+                ):
+                    return True
 
         return False
 

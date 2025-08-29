@@ -1,1 +1,3 @@
-"""Test suite for media-audit."""
+"""
+Media-audit test suite.
+"""

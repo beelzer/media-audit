@@ -82,10 +82,11 @@ class ProgressTracker:
         # Start ESC monitoring if available
         if sys.platform == "win32":
             try:
-                import msvcrt
+                import importlib.util
 
-                esc_thread = threading.Thread(target=self._monitor_esc, daemon=True)
-                esc_thread.start()
+                if importlib.util.find_spec("msvcrt"):
+                    esc_thread = threading.Thread(target=self._monitor_esc, daemon=True)
+                    esc_thread.start()
             except ImportError:
                 pass
 
