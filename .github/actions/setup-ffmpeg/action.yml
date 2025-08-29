@@ -1,0 +1,30 @@
+name: "Setup FFmpeg"
+description: "Install FFmpeg on any platform"
+runs:
+  using: "composite"
+  steps:
+    - name: Setup FFmpeg (x64 platforms)
+      if: runner.arch != 'ARM64'
+      uses: FedericoCarboni/setup-ffmpeg@v3
+      with:
+        ffmpeg-version: release
+        github-token: ${{ github.token }}
+
+    - name: Setup FFmpeg (macOS ARM64)
+      if: runner.os == 'macOS' && runner.arch == 'ARM64'
+      shell: bash
+      run: |
+        brew install ffmpeg
+        echo "FFmpeg installed via Homebrew for ARM64"
+        ffmpeg -version
+        ffprobe -version
+
+    - name: Setup FFmpeg (Linux ARM64)
+      if: runner.os == 'Linux' && runner.arch == 'ARM64'
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y ffmpeg
+        echo "FFmpeg installed via apt for ARM64"
+        ffmpeg -version
+        ffprobe -version
