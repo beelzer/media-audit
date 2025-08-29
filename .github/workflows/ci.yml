@@ -59,7 +59,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: 📥 Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -69,7 +69,7 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
 
       - name: 📦 Install uv
-        uses: astral-sh/setup-uv@v3
+        uses: astral-sh/setup-uv@v6
         with:
           version: ${{ env.UV_VERSION }}
           enable-cache: true
@@ -105,7 +105,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: 📥 Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: 🐍 Setup Python ${{ env.PYTHON_VERSION }}
         uses: actions/setup-python@v5
@@ -113,7 +113,7 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
 
       - name: 📦 Install uv
-        uses: astral-sh/setup-uv@v3
+        uses: astral-sh/setup-uv@v6
         with:
           version: ${{ env.UV_VERSION }}
           enable-cache: true
@@ -134,7 +134,7 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: 📥 Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: 🐍 Setup Python ${{ env.PYTHON_VERSION }}
         uses: actions/setup-python@v5
@@ -142,7 +142,7 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
 
       - name: 📦 Install uv
-        uses: astral-sh/setup-uv@v3
+        uses: astral-sh/setup-uv@v6
         with:
           version: ${{ env.UV_VERSION }}
           enable-cache: true
@@ -181,7 +181,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: 📥 Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: 🐍 Setup Python ${{ env.PYTHON_VERSION }}
         uses: actions/setup-python@v5
@@ -189,7 +189,7 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
 
       - name: 📦 Install uv
-        uses: astral-sh/setup-uv@v3
+        uses: astral-sh/setup-uv@v6
         with:
           version: ${{ env.UV_VERSION }}
           enable-cache: true
@@ -219,7 +219,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: 📥 Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -250,7 +250,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: 📥 Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: 🐍 Setup Python ${{ env.PYTHON_VERSION }}
         uses: actions/setup-python@v5
@@ -258,7 +258,7 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
 
       - name: 📦 Install uv
-        uses: astral-sh/setup-uv@v3
+        uses: astral-sh/setup-uv@v6
         with:
           version: ${{ env.UV_VERSION }}
           enable-cache: true
@@ -304,7 +304,7 @@ jobs:
     timeout-minutes: 20
     steps:
       - name: 📥 Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: 🐍 Setup Python ${{ matrix.python }}
         uses: actions/setup-python@v5
@@ -312,7 +312,7 @@ jobs:
           python-version: ${{ matrix.python }}
 
       - name: 📦 Install uv
-        uses: astral-sh/setup-uv@v3
+        uses: astral-sh/setup-uv@v6
         with:
           version: ${{ env.UV_VERSION }}
           enable-cache: true
@@ -366,7 +366,7 @@ jobs:
 
       - name: 📈 Coverage report
         if: matrix.coverage
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         with:
           files: ./coverage.xml
           flags: unittests
@@ -374,64 +374,6 @@ jobs:
           fail_ci_if_error: false
           verbose: true
           token: ${{ secrets.CODECOV_TOKEN }}
-
-  # ============================================================================
-  # 🧪 Python 3.14 Experimental Testing (Dead-end branch)
-  # ============================================================================
-
-  experimental-py314:
-    name: 🧪 Python 3.14 (Experimental)
-    needs: [quality-ruff-lint, quality-ruff-format, quality-mypy]
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    continue-on-error: true  # Don't fail the whole CI if this fails
-    steps:
-      - name: 📥 Checkout code
-        uses: actions/checkout@v4
-
-      - name: 🐍 Setup Python 3.14
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.14.0-alpha.1'
-          allow-prereleases: true
-
-      - name: 📦 Install uv
-        uses: astral-sh/setup-uv@v3
-        with:
-          version: ${{ env.UV_VERSION }}
-          enable-cache: true
-          cache-dependency-glob: '**/pyproject.toml'
-
-      - name: 🎥 Setup FFmpeg
-        uses: FedericoCarboni/setup-ffmpeg@v3
-        with:
-          ffmpeg-version: release
-          github-token: ${{ github.token }}
-
-      - name: 🔧 Install dependencies (experimental)
-        id: install-deps
-        continue-on-error: true
-        run: |
-          echo "::notice::Attempting to install dependencies on Python 3.14 alpha"
-          uv sync --frozen --all-extras || {
-            echo "::warning::Dependencies failed to install on Python 3.14 (expected for alpha)"
-            echo "Some packages (like PyYAML) may not yet support Python 3.14"
-            exit 0
-          }
-
-      - name: 🧪 Run tests
-        if: steps.install-deps.outcome == 'success'
-        shell: bash
-        run: |
-          echo "::group::Test execution on Python 3.14"
-          uv run pytest tests/ -v || echo "::warning::Python 3.14 tests failed (experimental)"
-          echo "::endgroup::"
-
-      - name: ⚠️ Skip tests due to dependency issues
-        if: steps.install-deps.outcome != 'success'
-        run: |
-          echo "::warning::Skipping Python 3.14 tests due to dependency compatibility issues"
-          echo "This is expected for alpha Python versions. Key packages like PyYAML need updates."
 
   # ============================================================================
   # 🏗️ Build Verification
@@ -444,7 +386,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: 📥 Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: 🐍 Setup Python ${{ env.PYTHON_VERSION }}
         uses: actions/setup-python@v5
@@ -452,7 +394,7 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
 
       - name: 📦 Install uv
-        uses: astral-sh/setup-uv@v3
+        uses: astral-sh/setup-uv@v6
         with:
           version: ${{ env.UV_VERSION }}
           enable-cache: true
@@ -491,7 +433,7 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: 📥 Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: 🐍 Setup Python ${{ env.PYTHON_VERSION }}
         uses: actions/setup-python@v5
@@ -499,7 +441,7 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
 
       - name: 📦 Install uv
-        uses: astral-sh/setup-uv@v3
+        uses: astral-sh/setup-uv@v6
         with:
           version: ${{ env.UV_VERSION }}
           enable-cache: true
@@ -546,7 +488,7 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: 📥 Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: 📊 Check job results
         id: check-results
