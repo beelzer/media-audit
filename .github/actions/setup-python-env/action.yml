@@ -38,24 +38,25 @@ runs:
           **/pyproject.toml
           **/uv.lock
 
-    - name: 🔧 Install dependencies
+    - name: 🔧 Install dependencies (custom command)
+      if: inputs.install-command != ''
+      shell: bash
+      run: ${{ inputs.install-command }}
+
+    - name: 🔧 Install dependencies (standard)
+      if: inputs.install-command == ''
       shell: bash
       run: |
-        # Use custom command if provided
-        if [ -n "${{ inputs.install-command }}" ]; then
-          ${{ inputs.install-command }}
-        else
-          # Build the uv sync command
-          FROZEN_FLAG=""
-          if [ "${{ inputs.frozen }}" = "true" ]; then
-            FROZEN_FLAG="--frozen"
-          fi
+        # Build the uv sync command
+        FROZEN_FLAG=""
+        if [ "${{ inputs.frozen }}" = "true" ]; then
+          FROZEN_FLAG="--frozen"
+        fi
 
-          if [ "${{ inputs.extras }}" = "all" ]; then
-            uv sync $FROZEN_FLAG --all-extras
-          elif [ -n "${{ inputs.extras }}" ]; then
-            uv sync $FROZEN_FLAG --extra ${{ inputs.extras }}
-          else
-            uv sync $FROZEN_FLAG
-          fi
+        if [ "${{ inputs.extras }}" = "all" ]; then
+          uv sync $FROZEN_FLAG --all-extras
+        elif [ -n "${{ inputs.extras }}" ]; then
+          uv sync $FROZEN_FLAG --extra ${{ inputs.extras }}
+        else
+          uv sync $FROZEN_FLAG
         fi
