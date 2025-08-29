@@ -235,8 +235,8 @@ class MediaCache:
             self.logger.debug(f"Failed to stat file {file_path}: {e}")
             return False
 
-    async def get_probe_data_async(self, file_path: Path) -> dict[str, Any] | None:
-        """Asynchronously get cached ffprobe data for video file.
+    async def get_probe_data(self, file_path: Path) -> dict[str, Any] | None:
+        """Get cached ffprobe data for video file.
 
         Checks memory cache first, then disk cache. Validates cache
         before returning.
@@ -278,50 +278,8 @@ class MediaCache:
         self.misses += 1
         return None
 
-    def get_probe_data(self, file_path: Path) -> dict[str, Any] | None:
-        """Get cached ffprobe data for video file.
-
-        Checks memory cache first, then disk cache. Validates cache
-        before returning.
-
-        Args:
-            file_path: Path to video file
-
-        Returns:
-            dict[str, Any] | None: Cached probe data or None if not found/invalid
-
-        """
-        if not self.enabled:
-            return None
-
-        key = self._get_file_key(file_path, "probe")
-
-        # Check memory cache first
-        if key in self._memory_cache:
-            entry = self._memory_cache[key]
-            if self._is_cache_valid(entry, file_path):
-                self.hits += 1
-                return entry.data  # type: ignore[no-any-return]
-
-        # Check disk cache
-        cache_file = self.probe_cache_dir / f"{key}.pkl"
-        if cache_file.exists():
-            try:
-                with open(cache_file, "rb") as f:
-                    entry = pickle.load(f)  # nosec B301 - trusted cache files
-                if self._is_cache_valid(entry, file_path):
-                    self._memory_cache[key] = entry
-                    self.hits += 1
-                    return entry.data  # type: ignore[no-any-return]
-            except Exception:
-                # Invalid cache entry, will be regenerated
-                pass
-
-        self.misses += 1
-        return None
-
-    async def set_probe_data_async(self, file_path: Path, data: dict[str, Any]) -> None:
-        """Asynchronously cache ffprobe data for video file.
+    async def set_probe_data(self, file_path: Path, data: dict[str, Any]) -> None:
+        """Cache ffprobe data for video file.
 
         Stores data in both memory and disk cache.
 
@@ -358,46 +316,8 @@ class MediaCache:
             # Silently fail on cache write errors
             pass
 
-    def set_probe_data(self, file_path: Path, data: dict[str, Any]) -> None:
-        """Cache ffprobe data for video file.
-
-        Stores data in both memory and disk cache.
-
-        Args:
-            file_path: Path to video file
-            data: Probe data to cache
-
-        """
-        if not self.enabled:
-            return
-
-        key = self._get_file_key(file_path, "probe")
-
-        try:
-            stat = file_path.stat()
-            entry = CacheEntry(
-                key=key,
-                data=data,
-                file_path=file_path,
-                file_size=stat.st_size,
-                file_mtime=stat.st_mtime,
-                cache_time=time.time(),
-                schema_version=self.schema_version,
-            )
-
-            # Save to memory cache
-            self._memory_cache[key] = entry
-
-            # Save to disk cache
-            cache_file = self.probe_cache_dir / f"{key}.pkl"
-            with open(cache_file, "wb") as f:
-                pickle.dump(entry, f)  # nosec B301 - trusted cache files
-        except Exception:
-            # Silently fail on cache write errors
-            pass
-
-    async def get_media_item_async(self, directory: Path, item_type: str) -> dict[str, Any] | None:
-        """Asynchronously get cached media item data."""
+    async def get_media_item(self, directory: Path, item_type: str) -> dict[str, Any] | None:
+        """Get cached media item data."""
         if not self.enabled:
             return None
 
@@ -430,43 +350,8 @@ class MediaCache:
         self.misses += 1
         return None
 
-    def get_media_item(self, directory: Path, item_type: str) -> dict[str, Any] | None:
-        """Get cached media item data."""
-        if not self.enabled:
-            return None
-
-        key = self._get_file_key(directory, f"media:{item_type}")
-
-        # Check memory cache
-        if key in self._memory_cache:
-            entry = self._memory_cache[key]
-            if self._is_cache_valid_for_directory(entry, directory):
-                self.hits += 1
-                return entry.data  # type: ignore[no-any-return]
-
-        # Check disk cache
-        cache_file = self.scan_cache_dir / f"{key}.json"
-        if cache_file.exists():
-            try:
-                with open(cache_file, encoding="utf-8") as f:
-                    cache_data = json.load(f)
-                    entry = CacheEntry(**cache_data)
-                    entry.file_path = Path(entry.file_path)  # Convert string back to Path
-
-                if self._is_cache_valid_for_directory(entry, directory):
-                    self._memory_cache[key] = entry
-                    self.hits += 1
-                    return entry.data  # type: ignore[no-any-return]
-            except Exception:
-                pass
-
-        self.misses += 1
-        return None
-
-    async def set_media_item_async(
-        self, directory: Path, item_type: str, data: dict[str, Any]
-    ) -> None:
-        """Asynchronously cache media item data."""
+    async def set_media_item(self, directory: Path, item_type: str, data: dict[str, Any]) -> None:
+        """Cache media item data."""
         if not self.enabled:
             return
 
@@ -502,46 +387,6 @@ class MediaCache:
             }
             async with aiofiles.open(cache_file, "w", encoding="utf-8") as f:
                 await f.write(json.dumps(cache_data))
-        except Exception:
-            pass
-
-    def set_media_item(self, directory: Path, item_type: str, data: dict[str, Any]) -> None:
-        """Cache media item data."""
-        if not self.enabled:
-            return
-
-        key = self._get_file_key(directory, f"media:{item_type}")
-
-        try:
-            # Get directory modification time
-            dir_mtime = self._get_directory_mtime(directory)
-
-            entry = CacheEntry(
-                key=key,
-                data=data,
-                file_path=directory,
-                file_size=0,  # Not used for directories
-                file_mtime=dir_mtime,
-                cache_time=time.time(),
-                schema_version=self.schema_version,
-            )
-
-            # Save to memory cache
-            self._memory_cache[key] = entry
-
-            # Save to disk cache (JSON for media items)
-            cache_file = self.scan_cache_dir / f"{key}.json"
-            cache_data = {
-                "key": entry.key,
-                "data": entry.data,
-                "file_path": str(entry.file_path),
-                "file_size": entry.file_size,
-                "file_mtime": entry.file_mtime,
-                "cache_time": entry.cache_time,
-                "schema_version": entry.schema_version,
-            }
-            with open(cache_file, "w", encoding="utf-8") as f:
-                json.dump(cache_data, f)
         except Exception:
             pass
 

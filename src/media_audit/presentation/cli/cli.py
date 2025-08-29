@@ -220,7 +220,7 @@ def scan(
     scanner = MediaScanner(cfg.scan)
 
     # Run async scan
-    result = asyncio.run(scanner.scan_async())
+    result = asyncio.run(scanner.scan())
 
     # Display results summary
     _display_summary(result)
