@@ -408,15 +408,30 @@ jobs:
           ffmpeg-version: release
           github-token: ${{ github.token }}
 
-      - name: 🔧 Install dependencies
-        run: uv sync --frozen --all-extras
+      - name: 🔧 Install dependencies (experimental)
+        id: install-deps
+        continue-on-error: true
+        run: |
+          echo "::notice::Attempting to install dependencies on Python 3.14 alpha"
+          uv sync --frozen --all-extras || {
+            echo "::warning::Dependencies failed to install on Python 3.14 (expected for alpha)"
+            echo "Some packages (like PyYAML) may not yet support Python 3.14"
+            exit 0
+          }
 
       - name: 🧪 Run tests
+        if: steps.install-deps.outcome == 'success'
         shell: bash
         run: |
           echo "::group::Test execution on Python 3.14"
           uv run pytest tests/ -v || echo "::warning::Python 3.14 tests failed (experimental)"
           echo "::endgroup::"
+
+      - name: ⚠️ Skip tests due to dependency issues
+        if: steps.install-deps.outcome != 'success'
+        run: |
+          echo "::warning::Skipping Python 3.14 tests due to dependency compatibility issues"
+          echo "This is expected for alpha Python versions. Key packages like PyYAML need updates."
 
   # ============================================================================
   # 🏗️ Build Verification
