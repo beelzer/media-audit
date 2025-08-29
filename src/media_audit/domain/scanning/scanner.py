@@ -304,27 +304,46 @@ class MediaScanner:
         for movie_dir in movie_dirs:
             if self.is_cancelled():
                 break
-            tasks.append(process_with_semaphore(movie_dir))
+            task = asyncio.create_task(process_with_semaphore(movie_dir))
+            tasks.append(task)
 
-        # Process all movies concurrently
-        for i, coro in enumerate(asyncio.as_completed(tasks), 1):
-            if self.is_cancelled():
-                break
-            try:
-                movie = await coro
-                if movie:
-                    result.movies.append(movie)
+        try:
+            # Process all movies concurrently
+            for i, coro in enumerate(asyncio.as_completed(tasks), 1):
+                if self.is_cancelled():
+                    # Cancel all remaining tasks
+                    for task in tasks:
+                        if not task.done():
+                            task.cancel()
+                    # Wait for tasks to complete cancellation
+                    await asyncio.gather(*tasks, return_exceptions=True)
+                    break
+                try:
+                    movie = await coro
+                    if movie:
+                        result.movies.append(movie)
+                        if progress:
+                            progress.update(
+                                movie_task,
+                                advance=1,
+                                description=f"[cyan]Movies: {i}/{total_movies} - {movie.name}[/cyan]",
+                            )
+                except asyncio.CancelledError:
+                    # Task was cancelled, just continue
                     if progress:
-                        progress.update(
-                            movie_task,
-                            advance=1,
-                            description=f"[cyan]Movies: {i}/{total_movies} - {movie.name}[/cyan]",
-                        )
-            except Exception as e:
-                self.logger.error(f"Error processing movie {movie_dir}: {e}", exc_info=True)
-                result.errors.append(f"Error processing movie {movie_dir.name}: {str(e)}")
-                if progress:
-                    progress.update(movie_task, advance=1)
+                        progress.update(movie_task, advance=1)
+                except Exception as e:
+                    self.logger.error(f"Error processing movie: {e}", exc_info=True)
+                    result.errors.append(f"Error processing movie: {str(e)}")
+                    if progress:
+                        progress.update(movie_task, advance=1)
+        finally:
+            # Ensure all tasks are cleaned up
+            for task in tasks:
+                if not task.done():
+                    task.cancel()
+            # Wait for all tasks to finish
+            await asyncio.gather(*tasks, return_exceptions=True)
 
     async def _scan_tv_shows(
         self,
@@ -367,27 +386,46 @@ class MediaScanner:
         for series_dir in series_dirs:
             if self.is_cancelled():
                 break
-            tasks.append(process_with_semaphore(series_dir))
+            task = asyncio.create_task(process_with_semaphore(series_dir))
+            tasks.append(task)
 
-        # Process all series concurrently
-        for i, coro in enumerate(asyncio.as_completed(tasks), 1):
-            if self.is_cancelled():
-                break
-            try:
-                series = await coro
-                if series:
-                    result.series.append(series)
+        try:
+            # Process all series concurrently
+            for i, coro in enumerate(asyncio.as_completed(tasks), 1):
+                if self.is_cancelled():
+                    # Cancel all remaining tasks
+                    for task in tasks:
+                        if not task.done():
+                            task.cancel()
+                    # Wait for tasks to complete cancellation
+                    await asyncio.gather(*tasks, return_exceptions=True)
+                    break
+                try:
+                    series = await coro
+                    if series:
+                        result.series.append(series)
+                        if progress:
+                            progress.update(
+                                tv_task,
+                                advance=1,
+                                description=f"[magenta]TV Series: {i}/{total_series} - {series.name}[/magenta]",
+                            )
+                except asyncio.CancelledError:
+                    # Task was cancelled, just continue
                     if progress:
-                        progress.update(
-                            tv_task,
-                            advance=1,
-                            description=f"[magenta]TV Series: {i}/{total_series} - {series.name}[/magenta]",
-                        )
-            except Exception as e:
-                self.logger.error(f"Error processing series {series_dir}: {e}", exc_info=True)
-                result.errors.append(f"Error processing series {series_dir.name}: {str(e)}")
-                if progress:
-                    progress.update(tv_task, advance=1)
+                        progress.update(tv_task, advance=1)
+                except Exception as e:
+                    self.logger.error(f"Error processing series: {e}", exc_info=True)
+                    result.errors.append(f"Error processing series: {str(e)}")
+                    if progress:
+                        progress.update(tv_task, advance=1)
+        finally:
+            # Ensure all tasks are cleaned up
+            for task in tasks:
+                if not task.done():
+                    task.cancel()
+            # Wait for all tasks to finish
+            await asyncio.gather(*tasks, return_exceptions=True)
 
     async def _scan_mixed_content(
         self, path: Path, result: ScanResult, progress: Progress | None = None
@@ -430,38 +468,57 @@ class MediaScanner:
         for item in items:
             if self.is_cancelled():
                 break
-            tasks.append(process_item(item))
+            task = asyncio.create_task(process_item(item))
+            tasks.append(task)
 
-        # Process all items concurrently
-        for i, coro in enumerate(asyncio.as_completed(tasks), 1):
-            if self.is_cancelled():
-                break
-            try:
-                item_type, media_item = await coro
-                if item_type == "series" and media_item:
-                    result.series.append(media_item)
-                    if progress:
-                        progress.update(
-                            mixed_task,
-                            advance=1,
-                            description=f"[yellow]Items: {i}/{total_items} - TV Series: {media_item.name}[/yellow]",
-                        )
-                elif item_type == "movie" and media_item:
-                    result.movies.append(media_item)
-                    if progress:
-                        progress.update(
-                            mixed_task,
-                            advance=1,
-                            description=f"[yellow]Items: {i}/{total_items} - Movie: {media_item.name}[/yellow]",
-                        )
-                else:
+        try:
+            # Process all items concurrently
+            for i, coro in enumerate(asyncio.as_completed(tasks), 1):
+                if self.is_cancelled():
+                    # Cancel all remaining tasks
+                    for task in tasks:
+                        if not task.done():
+                            task.cancel()
+                    # Wait for tasks to complete cancellation
+                    await asyncio.gather(*tasks, return_exceptions=True)
+                    break
+                try:
+                    item_type, media_item = await coro
+                    if item_type == "series" and media_item:
+                        result.series.append(media_item)
+                        if progress:
+                            progress.update(
+                                mixed_task,
+                                advance=1,
+                                description=f"[yellow]Items: {i}/{total_items} - TV Series: {media_item.name}[/yellow]",
+                            )
+                    elif item_type == "movie" and media_item:
+                        result.movies.append(media_item)
+                        if progress:
+                            progress.update(
+                                mixed_task,
+                                advance=1,
+                                description=f"[yellow]Items: {i}/{total_items} - Movie: {media_item.name}[/yellow]",
+                            )
+                    else:
+                        if progress:
+                            progress.update(mixed_task, advance=1)
+                except asyncio.CancelledError:
+                    # Task was cancelled, just continue
                     if progress:
                         progress.update(mixed_task, advance=1)
-            except Exception as e:
-                self.logger.exception(f"Error processing item: {e}")
-                result.errors.append(f"Error processing item: {str(e)}")
-                if progress:
-                    progress.update(mixed_task, advance=1)
+                except Exception as e:
+                    self.logger.exception(f"Error processing item: {e}")
+                    result.errors.append(f"Error processing item: {str(e)}")
+                    if progress:
+                        progress.update(mixed_task, advance=1)
+        finally:
+            # Ensure all tasks are cleaned up
+            for task in tasks:
+                if not task.done():
+                    task.cancel()
+            # Wait for all tasks to finish
+            await asyncio.gather(*tasks, return_exceptions=True)
 
     async def _process_movie(self, directory: Path) -> MovieItem | None:
         """Process a single movie directory.

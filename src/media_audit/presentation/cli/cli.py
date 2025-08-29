@@ -227,14 +227,59 @@ def scan(
 
     try:
         scanner = MediaScanner(cfg.scan)
-        # Run async scan
-        result = asyncio.run(scanner.scan())
+
+        # Configure asyncio for Windows to suppress transport errors
+        if sys.platform == "win32":
+            # Set the event loop policy to suppress ProactorBasePipeTransport warnings
+            asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
+
+            # Configure exception handler to suppress transport errors
+            def exception_handler(loop: asyncio.AbstractEventLoop, context: dict[str, Any]) -> None:
+                exception = context.get("exception")
+                if exception and "I/O operation on closed pipe" in str(exception):
+                    return  # Suppress these specific errors
+
+                # Suppress "Task was destroyed but it is pending" messages
+                message = context.get("message", "")
+                if message and any(
+                    msg in message
+                    for msg in [
+                        "unclosed transport",
+                        "Task was destroyed but it is pending",
+                        "Task exception was never retrieved",
+                    ]
+                ):
+                    return  # Suppress these cleanup messages
+
+                # Log other exceptions if needed
+                if message:
+                    import logging
+
+                    logging.getLogger("asyncio").error(f"Unhandled exception: {context}")
+
+            loop = asyncio.new_event_loop()
+            loop.set_exception_handler(exception_handler)
+            asyncio.set_event_loop(loop)
+
+            # Run async scan with custom loop
+            result = loop.run_until_complete(scanner.scan())
+            loop.close()
+        else:
+            # Run async scan normally on non-Windows platforms
+            result = asyncio.run(scanner.scan())
     except Exception as e:
         error_reporter.report_error(e, "Scan failed")
         sys.exit(1)
 
+    # Check if scan was cancelled
+    was_cancelled = any("cancelled" in str(err).lower() for err in result.errors)
+
     # Display results summary
     _display_summary(result)
+
+    if was_cancelled:
+        console.print("\n[yellow]Scan was cancelled. Reports will not be generated.[/yellow]")
+        sys.exit(2)  # Exit with special code for cancellation
 
     # Generate reports
     if cfg.report.output_path:
@@ -291,6 +336,69 @@ def init_config(output: Path, full: bool = False) -> None:
     sample_config.save(output)
     console.print(f"[green]✓[/green] Created sample configuration at {output}")
     console.print("\n[dim]Edit this file to customize your scan settings.[/dim]")
+
+
+@cli.command()
+@click.option(
+    "--cache-dir",
+    type=click.Path(path_type=Path),
+    help="Custom cache directory to clear (default: ~/.cache/media-audit)",
+)
+@click.option(
+    "--force",
+    "-f",
+    is_flag=True,
+    help="Skip confirmation prompt",
+)
+def clear_cache(cache_dir: Path | None, force: bool) -> None:
+    """Clear the media-audit cache directory."""
+    import os
+    import shutil
+    from pathlib import Path
+
+    # Determine cache directory
+    if cache_dir:
+        cache_path = cache_dir
+    else:
+        # Default cache directory - check multiple locations
+        cache_path = Path.home() / ".cache" / "media-audit"
+
+        # On Windows, also check the Windows-specific location if Unix location doesn't exist
+        if sys.platform == "win32" and not cache_path.exists():
+            cache_base = Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData" / "Local"))
+            windows_cache = cache_base / "media-audit" / "cache"
+            if windows_cache.exists():
+                cache_path = windows_cache
+
+    # Check if cache directory exists
+    if not cache_path.exists():
+        console.print(f"[yellow]Cache directory does not exist:[/yellow] {cache_path}")
+        return
+
+    # Calculate cache size
+    try:
+        total_size = sum(f.stat().st_size for f in cache_path.rglob("*") if f.is_file())
+        size_mb = total_size / (1024 * 1024)
+        size_str = f"{size_mb:.1f} MB" if size_mb < 1024 else f"{size_mb / 1024:.1f} GB"
+    except Exception:
+        size_str = "unknown size"
+
+    # Show cache info and confirm
+    console.print(f"[cyan]Cache directory:[/cyan] {cache_path}")
+    console.print(f"[cyan]Cache size:[/cyan] {size_str}")
+
+    if not force and not click.confirm("Are you sure you want to clear the cache?"):
+        console.print("[yellow]Aborted.[/yellow]")
+        return
+
+    # Clear the cache
+    try:
+        shutil.rmtree(cache_path, ignore_errors=True)
+        console.print(f"[green]SUCCESS:[/green] Cache cleared successfully ({size_str} freed)")
+        console.print("[dim]The cache will be recreated on the next scan.[/dim]")
+    except Exception as e:
+        console.print(f"[red]ERROR:[/red] Failed to clear cache: {e}")
+        sys.exit(1)
 
 
 def _count_issues_by_severity(result: ScanResult) -> tuple[int, int]:

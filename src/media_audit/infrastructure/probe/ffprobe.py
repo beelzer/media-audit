@@ -6,6 +6,9 @@ import asyncio
 import json
 import logging
 import shutil
+import subprocess
+import sys
+from contextlib import suppress
 from functools import cache
 from pathlib import Path
 from typing import Any
@@ -50,11 +53,28 @@ class FFProbe:
             str(file_path),
         ]
 
+        proc = None
         try:
+            # Create subprocess with proper cleanup
             proc = await asyncio.create_subprocess_exec(
-                *cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
+                *cmd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+                # On Windows, prevent console window popup
+                creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0,
             )
-            stdout, stderr = await proc.communicate()
+
+            # Set a timeout for the probe operation
+            try:
+                stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=30.0)
+            except TimeoutError:
+                self.logger.warning(f"FFprobe timeout for {file_path}")
+                if proc:
+                    proc.terminate()
+                    await asyncio.sleep(0.1)  # Give it a moment to terminate
+                    if proc.returncode is None:
+                        proc.kill()  # Force kill if still running
+                return {}
 
             if proc.returncode != 0:
                 if stderr:
@@ -75,9 +95,27 @@ class FFProbe:
         except (json.JSONDecodeError, FileNotFoundError) as e:
             self.logger.warning(f"Failed to probe {file_path}: {e}")
             return {}
+        except asyncio.CancelledError:
+            # Handle cancellation gracefully
+            if proc and proc.returncode is None:
+                proc.terminate()
+                try:
+                    await asyncio.wait_for(proc.wait(), timeout=1.0)
+                except TimeoutError:
+                    proc.kill()
+            raise  # Re-raise to propagate cancellation
         except Exception as e:
             self.logger.error(f"Unexpected error probing {file_path}: {e}", exc_info=True)
             return {}
+        finally:
+            # Ensure process is cleaned up
+            if proc and proc.returncode is None:
+                try:
+                    proc.terminate()
+                    await asyncio.wait_for(proc.wait(), timeout=0.5)
+                except (TimeoutError, ProcessLookupError):
+                    with suppress(ProcessLookupError):
+                        proc.kill()
 
     async def get_video_info(self, file_path: Path) -> VideoInfo:
         """Extract video information from file."""
