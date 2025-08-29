@@ -293,7 +293,7 @@ jobs:
             arch: x64
             python: '3.13'
             coverage: true
-          - os: windows-2022
+          - os: windows-latest
             os-name: Windows
             os-emoji: 🪟
             arch: x64
@@ -306,7 +306,7 @@ jobs:
             python: '3.13'
             coverage: false
           # ARM platforms
-          - os: macos-14
+          - os: macos-latest
             os-name: macOS
             os-emoji: 🍎
             arch: arm64
@@ -314,12 +314,13 @@ jobs:
             coverage: false
             skip-ffmpeg-action: true  # Use homebrew instead
           # ARM Linux (native ARM runner)
-          - os: ubuntu-22.04-arm
+          - os: ubuntu-24.04-arm
             os-name: Linux
             os-emoji: 🐧
             arch: arm64
             python: '3.13'
             coverage: false
+            skip-ffmpeg-action: true  # Use apt instead
           # Windows ARM - Disabled until uv supports Windows ARM64
           # Note: windows-11-arm runner exists but uv doesn't support aarch64-pc-windows-msvc yet
           # - os: windows-11-arm
@@ -356,10 +357,19 @@ jobs:
           github-token: ${{ github.token }}
 
       - name: 🎥 Setup FFmpeg (macOS ARM via Homebrew)
-        if: matrix.os == 'macos-14'
+        if: matrix.os == 'macos-latest'
         run: |
           brew install ffmpeg
           echo "FFmpeg installed via Homebrew for ARM64"
+          ffmpeg -version
+          ffprobe -version
+
+      - name: 🎥 Setup FFmpeg (Linux ARM via apt)
+        if: matrix.os == 'ubuntu-24.04-arm'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+          echo "FFmpeg installed via apt for ARM64"
           ffmpeg -version
           ffprobe -version
 
