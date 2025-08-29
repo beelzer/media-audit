@@ -45,6 +45,8 @@ env:
   PYTHON_VERSION: '3.13'
   UV_VERSION: '0.4.18'
   UV_CACHE_DIR: ~/.cache/uv
+  PIP_CACHE_DIR: ~/.cache/pip
+  PRE_COMMIT_HOME: ~/.cache/pre-commit
   PYTHONUNBUFFERED: '1'
   FORCE_COLOR: '1'
 
@@ -264,6 +266,14 @@ jobs:
           enable-cache: true
           cache-dependency-glob: '**/pyproject.toml'
 
+      - name: 💾 Cache pip packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-audit-${{ runner.os }}-${{ hashFiles('**/pyproject.toml') }}
+          restore-keys: |
+            pip-audit-${{ runner.os }}-
+
       - name: 🔧 Install pip-audit
         run: pip install pip-audit
 
@@ -347,6 +357,30 @@ jobs:
           version: ${{ env.UV_VERSION }}
           enable-cache: true
           cache-dependency-glob: '**/pyproject.toml'
+
+      - name: 💾 Cache pip packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/pip
+            ~/Library/Caches/pip
+            ~\AppData\Local\pip\Cache
+          key: pip-${{ matrix.os }}-${{ matrix.arch }}-py${{ matrix.python }}-${{ hashFiles('**/pyproject.toml', '**/uv.lock') }}
+          restore-keys: |
+            pip-${{ matrix.os }}-${{ matrix.arch }}-py${{ matrix.python }}-
+            pip-${{ matrix.os }}-${{ matrix.arch }}-
+
+      - name: 💾 Cache test data and fixtures
+        uses: actions/cache@v4
+        with:
+          path: |
+            tests/.pytest_cache
+            .coverage
+            htmlcov
+          key: test-cache-${{ matrix.os }}-${{ matrix.arch }}-py${{ matrix.python }}-${{ hashFiles('tests/**/*.py', 'src/**/*.py') }}
+          restore-keys: |
+            test-cache-${{ matrix.os }}-${{ matrix.arch }}-py${{ matrix.python }}-
+            test-cache-${{ matrix.os }}-${{ matrix.arch }}-
 
       - name: 🎥 Setup FFmpeg (via Action)
         if: matrix.skip-ffmpeg-action != true
@@ -513,10 +547,14 @@ jobs:
       - name: 💾 Cache pre-commit environments
         uses: actions/cache@v4
         with:
-          path: ~/.cache/pre-commit
-          key: pre-commit-${{ runner.os }}-${{ hashFiles('.pre-commit-config.yaml') }}-${{ hashFiles('pyproject.toml') }}
+          path: |
+            ~/.cache/pre-commit
+            ~/.cache/pip
+            ~/.local
+          key: pre-commit-${{ runner.os }}-py${{ env.PYTHON_VERSION }}-${{ hashFiles('.pre-commit-config.yaml', '**/pyproject.toml', '**/uv.lock') }}
           restore-keys: |
-            pre-commit-${{ runner.os }}-${{ hashFiles('.pre-commit-config.yaml') }}-
+            pre-commit-${{ runner.os }}-py${{ env.PYTHON_VERSION }}-${{ hashFiles('.pre-commit-config.yaml') }}-
+            pre-commit-${{ runner.os }}-py${{ env.PYTHON_VERSION }}-
             pre-commit-${{ runner.os }}-
 
       - name: 📦 Install dependencies
