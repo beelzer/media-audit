@@ -136,7 +136,7 @@ jobs:
       - name: 📥 Checkout code
         uses: actions/checkout@v5
         with:
-          fetch-depth: 0  # Required for secrets detection
+          fetch-depth: 0  # Required for secret detection
 
       - name: 🔧 Setup Python Environment
         uses: ./.github/actions/setup-python-env
