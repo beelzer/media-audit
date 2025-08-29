@@ -30,6 +30,20 @@ class TVParser(BaseParser):
         """Initialize TV parser."""
         super().__init__(*args, **kwargs)
         self.logger = get_logger("parser.tv")
+        self.episode_callback = None  # Callback for episode progress
+
+    def set_episode_callback(self, callback):
+        """Set callback for episode progress updates."""
+        self.episode_callback = callback
+
+    def parse_sync(self, directory: Path) -> SeriesItem | None:
+        """Synchronous wrapper for parse method."""
+        loop = asyncio.new_event_loop()
+        try:
+            asyncio.set_event_loop(loop)
+            return loop.run_until_complete(self.parse(directory))
+        finally:
+            loop.close()
 
     async def parse(self, directory: Path) -> SeriesItem | None:
         """Parse a TV series directory."""
@@ -108,9 +122,23 @@ class TVParser(BaseParser):
         # Find episodes
         episodes = self.find_episodes(directory)
         for ep_path, ep_info in episodes:
+            # Report that we're starting this episode
+            if self.episode_callback:
+                # Extract just the episode title, not the full filename
+                episode_title = ep_info.get("title", "") or ""
+                if not episode_title:
+                    # Fallback to filename without series name and episode number
+                    episode_title = ep_path.stem
+                episode_name = f"S{ep_info['season']:02d}E{ep_info['episode']:02d}: {episode_title}"
+                self.episode_callback(episode_name, ep_path, "start")
+
             episode = self.create_episode(ep_path, ep_info)
             if episode:
                 season.episodes.append(episode)
+
+            # Report that we've completed this episode
+            if self.episode_callback:
+                self.episode_callback(episode_name, ep_path, "complete")
 
         # Sort episodes by episode number
         season.episodes.sort(key=lambda e: (e.season_number, e.episode_number))
@@ -185,15 +213,41 @@ class TVParser(BaseParser):
 
     def extract_episode_title(self, filename: str) -> str | None:
         """Extract episode title from filename."""
-        # Remove episode numbering and extension
+        # First, find where the episode title likely starts (after SXXEXX pattern)
+        patterns = [
+            r"S\d+E\d+\s*[-_.]?\s*(.+?)(?:\.\w+)?$",  # S01E01 - Title.ext
+            r"\d+x\d+\s*[-_.]?\s*(.+?)(?:\.\w+)?$",  # 1x01 - Title.ext
+            r"Episode\s*\d+\s*[-_.]?\s*(.+?)(?:\.\w+)?$",  # Episode 1 - Title.ext
+        ]
+
+        for pattern in patterns:
+            match = re.search(pattern, filename, re.IGNORECASE)
+            if match:
+                title = match.group(1)
+                # Clean up the extracted title
+                title = re.sub(r"[\._]+", " ", title)  # Replace dots/underscores with spaces
+                title = re.sub(r"\[.*?\]", "", title)  # Remove brackets
+                title = re.sub(r"\(.*?\)", "", title)  # Remove parentheses
+                title = re.sub(r"\s+", " ", title)  # Normalize spaces
+                title = title.strip()
+
+                # Remove any show name that might still be at the start
+                # This is a bit tricky without knowing the show name, but we can try common patterns
+                # Usually the episode title is after a separator like " - "
+                if " - " in title:
+                    parts = title.split(" - ", 1)
+                    if len(parts) > 1:
+                        title = parts[1].strip()
+
+                return title if title else None
+
+        # Fallback: just clean the filename
         title = re.sub(r"S\d+E\d+", "", filename, flags=re.IGNORECASE)
         title = re.sub(r"\d+x\d+", "", title)
-        title = re.sub(r"Season\s*\d+\s*Episode\s*\d+", "", title, flags=re.IGNORECASE)
-
-        # Remove common separators and clean up
         title = re.sub(r"[\._-]+", " ", title)
-        title = re.sub(r"\[.*?\]", "", title)  # Remove brackets
-        title = re.sub(r"\(.*?\)", "", title)  # Remove parentheses
+        title = re.sub(r"\[.*?\]", "", title)
+        title = re.sub(r"\(.*?\)", "", title)
+        title = re.sub(r"\s+", " ", title)
         title = title.strip()
 
         return title if title else None

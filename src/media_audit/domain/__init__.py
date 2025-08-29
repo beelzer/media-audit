@@ -2,7 +2,6 @@
 
 from .parsing import BaseParser, MovieParser, TVParser
 from .patterns import MediaPatterns, ServerProfile, get_patterns
-from .scanning import MediaScanner
 from .validation import MediaValidator
 
 __all__ = [
@@ -12,6 +11,5 @@ __all__ = [
     "MediaPatterns",
     "ServerProfile",
     "get_patterns",
-    "MediaScanner",
     "MediaValidator",
 ]

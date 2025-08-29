@@ -1,0 +1,21 @@
+# Test configuration with limited scope
+scan:
+  root_paths:
+    - S:/Media/Movies/10 Cloverfield Lane (2016)
+    - S:/Media/Movies/12 Angry Men (1957)
+
+  profiles:
+    - plex
+
+  allowed_codecs:
+    - hevc
+    - h265
+    - av1
+
+  concurrent_workers: 2
+  cache_enabled: false
+
+report:
+  output_path: test-scan.html
+  auto_open: false
+  problems_only: true

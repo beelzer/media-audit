@@ -1,0 +1,22 @@
+# Test multi-root progress bars
+scan:
+  root_paths:
+    - S:/Media/Movies/10 Cloverfield Lane (2016)
+    - S:/Media/Movies/12 Angry Men (1957)
+    - S:/Media/TV Shows/11.22.63
+    - S:/Media/TV Shows/12 Monkeys
+
+  profiles:
+    - plex
+
+  allowed_codecs:
+    - hevc
+    - h265
+    - av1
+
+  concurrent_workers: 2
+  cache_enabled: true
+
+report:
+  output_path: test-multi.html
+  auto_open: false

@@ -21,6 +21,15 @@ class MovieParser(BaseParser):
         super().__init__(*args, **kwargs)
         self.logger = get_logger("parser.movie")
 
+    def parse_sync(self, directory: Path) -> MovieItem | None:
+        """Synchronous wrapper for parse method."""
+        loop = asyncio.new_event_loop()
+        try:
+            asyncio.set_event_loop(loop)
+            return loop.run_until_complete(self.parse(directory))
+        finally:
+            loop.close()
+
     async def parse(self, directory: Path) -> MovieItem | None:
         """Parse a movie directory."""
         if not directory.is_dir():
