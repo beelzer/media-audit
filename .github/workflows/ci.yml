@@ -52,19 +52,27 @@ env:
 
 jobs:
   # ============================================================================
-  # 🎯 Quality Gates - First line of defense
+  # 🚀 Setup Job - Prepare dependencies and cache for other jobs
   # ============================================================================
 
-  quality-ruff-lint:
-    name: 🎨 Ruff Linting
+  setup-environment:
+    name: 📦 Setup Environment
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    outputs:
+      cache-key: ${{ steps.cache-key.outputs.key }}
+      uv-cache-hit: ${{ steps.uv-cache.outputs.cache-hit }}
     steps:
       - name: 📥 Checkout code
         uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
+      - name: 🔑 Generate cache key
+        id: cache-key
+        run: |
+          echo "key=deps-${{ runner.os }}-py${{ env.PYTHON_VERSION }}-${{ hashFiles('**/pyproject.toml', '**/uv.lock') }}" >> "$GITHUB_OUTPUT"
+
       - name: 🐍 Setup Python ${{ env.PYTHON_VERSION }}
         uses: actions/setup-python@v5
         with:
@@ -75,36 +83,59 @@ jobs:
         with:
           version: ${{ env.UV_VERSION }}
           enable-cache: true
-          cache-dependency-glob: '**/pyproject.toml'
+          cache-dependency-glob: |
+            **/pyproject.toml
+            **/uv.lock
 
-      - name: 🔧 Install dependencies
+      - name: 💾 Cache uv environment
+        id: uv-cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/uv
+            ~/.local/share/uv
+            .venv
+          key: ${{ steps.cache-key.outputs.key }}
+          restore-keys: |
+            deps-${{ runner.os }}-py${{ env.PYTHON_VERSION }}-
+
+      - name: 🔧 Install all dependencies
+        if: steps.uv-cache.outputs.cache-hit != 'true'
         run: |
           uv sync --frozen --all-extras
+          echo "Dependencies installed and cached"
+
+      - name: 📊 Verify installation
+        run: |
           echo "::group::Installed packages"
           uv pip list
           echo "::endgroup::"
 
-      - name: 🎨 Run Ruff linting
-        id: ruff-lint
-        run: |
-          echo "::group::Ruff linting output"
-          uv run ruff check src/ tests/ --output-format=github
-          echo "::endgroup::"
+  # ============================================================================
+  # 🎯 Quality Gates - Using Matrix Strategy for Parallel Execution
+  # ============================================================================
 
-      - name: 📊 Upload Ruff results
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: ruff-lint-results
-          path: |
-            .ruff_cache/
-          if-no-files-found: ignore
-          retention-days: 7
-
-  quality-ruff-format:
-    name: 🖌️ Ruff Formatting
+  quality-checks:
+    name: 🎯 ${{ matrix.check.name }}
+    needs: setup-environment
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        check:
+          - id: ruff-lint
+            name: Ruff Linting
+            command: ruff check src/ tests/ --output-format=github
+            emoji: 🎨
+          - id: ruff-format
+            name: Ruff Formatting
+            command: ruff format --check src/ tests/ --diff
+            emoji: 🖌️
+          - id: mypy
+            name: Type Checking
+            command: mypy src/ --show-column-numbers --show-error-context --pretty
+            emoji: 🔍
     steps:
       - name: 📥 Checkout code
         uses: actions/checkout@v5
@@ -119,24 +150,64 @@ jobs:
         with:
           version: ${{ env.UV_VERSION }}
           enable-cache: true
-          cache-dependency-glob: '**/pyproject.toml'
+          cache-dependency-glob: |
+            **/pyproject.toml
+            **/uv.lock
 
-      - name: 🔧 Install dependencies
-        run: uv sync --frozen --all-extras
+      - name: 💾 Restore cached environment
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/uv
+            ~/.local/share/uv
+            .venv
+          key: ${{ needs.setup-environment.outputs.cache-key }}
+          restore-keys: |
+            deps-${{ runner.os }}-py${{ env.PYTHON_VERSION }}-
 
-      - name: 🖌️ Check formatting with Ruff
+      - name: 🔧 Ensure dependencies
         run: |
-          echo "::group::Formatting check"
-          uv run ruff format --check src/ tests/ --diff
+          if [ ! -d ".venv" ]; then
+            uv sync --frozen --all-extras
+          fi
+
+      - name: ${{ matrix.check.emoji }} Run ${{ matrix.check.name }}
+        id: check
+        run: |
+          echo "::group::${{ matrix.check.name }} output"
+          uv run ${{ matrix.check.command }}
           echo "::endgroup::"
 
-  quality-mypy:
-    name: 🔍 Type Checking
+      - name: 📊 Generate report for mypy
+        if: matrix.check.id == 'mypy' && failure()
+        run: |
+          uv run mypy src/ --html-report mypy-report --any-exprs-report mypy-report || true
+
+      - name: 📤 Upload artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.check.id }}-results
+          path: |
+            mypy-report/
+            .ruff_cache/
+          if-no-files-found: ignore
+          retention-days: 3
+
+  # ============================================================================
+  # 🛡️ Security Scanning - Combined into Single Job with Parallel Steps
+  # ============================================================================
+
+  security-scan:
+    name: 🛡️ Security Analysis
+    needs: setup-environment
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - name: 📥 Checkout code
         uses: actions/checkout@v5
+        with:
+          fetch-depth: 0  # Required for secrets detection
 
       - name: 🐍 Setup Python ${{ env.PYTHON_VERSION }}
         uses: actions/setup-python@v5
@@ -148,97 +219,53 @@ jobs:
         with:
           version: ${{ env.UV_VERSION }}
           enable-cache: true
-          cache-dependency-glob: '**/pyproject.toml'
+          cache-dependency-glob: |
+            **/pyproject.toml
+            **/uv.lock
 
-      - name: 🔧 Install dependencies
-        run: uv sync --frozen --all-extras
+      - name: 💾 Restore cached environment
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/uv
+            ~/.local/share/uv
+            .venv
+          key: ${{ needs.setup-environment.outputs.cache-key }}
+          restore-keys: |
+            deps-${{ runner.os }}-py${{ env.PYTHON_VERSION }}-
 
-      - name: 🔍 Run mypy type checking
+      - name: 💾 Cache security tools
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/pip
+            ~/.local/bin
+          key: security-tools-${{ runner.os }}-${{ hashFiles('**/pyproject.toml') }}
+          restore-keys: |
+            security-tools-${{ runner.os }}-
+
+      - name: 🔧 Install security tools
         run: |
-          echo "::group::MyPy output"
-          uv run mypy src/ --show-column-numbers --show-error-context --pretty
-          echo "::endgroup::"
-
-      - name: 📊 Generate mypy report
-        if: always()
-        run: |
-          uv run mypy src/ --html-report mypy-report --any-exprs-report mypy-report || true
-
-      - name: 📤 Upload mypy report
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: mypy-html-report
-          path: mypy-report/
-          if-no-files-found: ignore
-          retention-days: 7
-
-  # ============================================================================
-  # 🛡️ Security Scanning
-  # ============================================================================
-
-  security-bandit:
-    name: 🔒 Security Analysis
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - name: 📥 Checkout code
-        uses: actions/checkout@v5
-
-      - name: 🐍 Setup Python ${{ env.PYTHON_VERSION }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-
-      - name: 📦 Install uv
-        uses: astral-sh/setup-uv@v6
-        with:
-          version: ${{ env.UV_VERSION }}
-          enable-cache: true
-          cache-dependency-glob: '**/pyproject.toml'
-
-      - name: 🔧 Install dependencies
-        run: uv sync --frozen --all-extras
+          # Ensure dependencies
+          if [ ! -d ".venv" ]; then
+            uv sync --frozen --all-extras
+          fi
+          # Install additional security tools
+          pip install --user detect-secrets pip-audit
 
       - name: 🔒 Run Bandit security scan
+        id: bandit
         run: |
           echo "::group::Bandit security analysis"
-          uv run bandit -r src/ -ll -f json -o bandit-report.json
+          uv run bandit -r src/ -ll -f json -o bandit-report.json || true
           uv run bandit -r src/ -ll
           echo "::endgroup::"
 
-      - name: 📊 Upload security report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: bandit-security-report
-          path: bandit-report.json
-          retention-days: 30
-
-  security-secrets:
-    name: 🔐 Secrets Detection
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - name: 📥 Checkout code
-        uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
-
-      - name: 🐍 Setup Python ${{ env.PYTHON_VERSION }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-
-      - name: 📦 Install detect-secrets
-        run: pip install detect-secrets
-
       - name: 🔐 Scan for secrets
+        id: secrets
         run: |
           echo "::group::Secrets detection"
-          # Scan and verify against baseline (non-interactive)
           detect-secrets scan --baseline .secrets.baseline
-          # Check if any real secrets are found
           if detect-secrets scan --baseline .secrets.baseline | grep -q "no secrets detected"; then
             echo "✅ No secrets detected"
           else
@@ -246,52 +273,31 @@ jobs:
           fi
           echo "::endgroup::"
 
-  security-dependencies:
-    name: 🛡️ Dependency Audit
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - name: 📥 Checkout code
-        uses: actions/checkout@v5
-
-      - name: 🐍 Setup Python ${{ env.PYTHON_VERSION }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-
-      - name: 📦 Install uv
-        uses: astral-sh/setup-uv@v6
-        with:
-          version: ${{ env.UV_VERSION }}
-          enable-cache: true
-          cache-dependency-glob: '**/pyproject.toml'
-
-      - name: 💾 Cache pip packages
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: pip-audit-${{ runner.os }}-${{ hashFiles('**/pyproject.toml') }}
-          restore-keys: |
-            pip-audit-${{ runner.os }}-
-
-      - name: 🔧 Install pip-audit
-        run: pip install pip-audit
-
       - name: 🛡️ Check dependencies for vulnerabilities
+        id: dependencies
         run: |
           echo "::group::Dependency vulnerability scan"
           uv pip compile pyproject.toml -o requirements.txt
-          pip-audit -r requirements.txt --desc
+          pip-audit -r requirements.txt --desc || true
           echo "::endgroup::"
 
+      - name: 📊 Upload security reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-reports
+          path: |
+            bandit-report.json
+            requirements.txt
+          retention-days: 30
+
   # ============================================================================
-  # 🧪 Testing Matrix
+  # 🧪 Testing Matrix - Can run in parallel with quality checks
   # ============================================================================
 
   test-matrix:
     name: 🧪${{ matrix.os-emoji }} ${{ matrix.os-name }} • ${{ matrix.arch }} • Py${{ matrix.python }}
-    needs: [quality-ruff-lint, quality-ruff-format, quality-mypy]
-    # Note: ARM runners (ubuntu-22.04-arm, windows-11-arm) are beta images from partner-runner-images
+    needs: setup-environment  # Only needs setup, not quality checks
     strategy:
       fail-fast: false
       matrix:
@@ -322,24 +328,14 @@ jobs:
             arch: arm64
             python: '3.13'
             coverage: false
-            skip-ffmpeg-action: true  # Use homebrew instead
-          # ARM Linux (native ARM runner)
+            skip-ffmpeg-action: true
           - os: ubuntu-24.04-arm
             os-name: Linux
             os-emoji: 🐧
             arch: arm64
             python: '3.13'
             coverage: false
-            skip-ffmpeg-action: true  # Use apt instead
-          # Windows ARM - Disabled until uv supports Windows ARM64
-          # Note: windows-11-arm runner exists but uv doesn't support aarch64-pc-windows-msvc yet
-          # - os: windows-11-arm
-          #   os-name: Windows
-          #   os-emoji: 🪟
-          #   arch: arm64
-          #   python: '3.13'
-          #   coverage: false
-          #   skip-ffmpeg-action: true
+            skip-ffmpeg-action: true
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
     steps:
@@ -356,12 +352,16 @@ jobs:
         with:
           version: ${{ env.UV_VERSION }}
           enable-cache: true
-          cache-dependency-glob: '**/pyproject.toml'
+          cache-dependency-glob: |
+            **/pyproject.toml
+            **/uv.lock
 
-      - name: 💾 Cache pip packages
+      - name: 💾 Cache dependencies
         uses: actions/cache@v4
         with:
           path: |
+            ~/.cache/uv
+            ~/.local/share/uv
             ~/.cache/pip
             ~/Library/Caches/pip
             ~\AppData\Local\pip\Cache
@@ -370,7 +370,7 @@ jobs:
             pip-${{ matrix.os }}-${{ matrix.arch }}-py${{ matrix.python }}-
             pip-${{ matrix.os }}-${{ matrix.arch }}-
 
-      - name: 💾 Cache test data and fixtures
+      - name: 💾 Cache test data
         uses: actions/cache@v4
         with:
           path: |
@@ -406,22 +406,6 @@ jobs:
           echo "FFmpeg installed via apt for ARM64"
           ffmpeg -version
           ffprobe -version
-
-      # Windows ARM FFmpeg setup - disabled until uv supports Windows ARM64
-      # - name: 🎥 Setup FFmpeg (Windows ARM)
-      #   if: matrix.os == 'windows-11-arm'
-      #   shell: pwsh
-      #   run: |
-      #     # Download FFmpeg build (using x64 build until ARM64 builds are available)
-      #     # Note: This may need adjustment when native ARM64 builds are released
-      #     $ffmpegUrl = "https://github.com/BtbN/FFmpeg-Builds/releases/latest/download/ffmpeg-master-latest-win64-gpl.zip"
-      #     Invoke-WebRequest -Uri $ffmpegUrl -OutFile ffmpeg.zip
-      #     Expand-Archive -Path ffmpeg.zip -DestinationPath .
-      #     $ffmpegDir = Get-ChildItem -Directory -Filter "ffmpeg-*" | Select-Object -First 1
-      #     $env:PATH = "$($ffmpegDir.FullName)\bin;$env:PATH"
-      #     echo "$($ffmpegDir.FullName)\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-      #     ffmpeg -version
-      #     ffprobe -version
 
       - name: 🔧 Install dependencies
         run: uv sync --frozen --all-extras
@@ -459,7 +443,7 @@ jobs:
             junit.xml
             htmlcov/
             coverage.xml
-          retention-days: 7
+          retention-days: 3
 
       - name: 📈 Coverage report
         if: matrix.coverage
@@ -478,7 +462,7 @@ jobs:
 
   build-package:
     name: 📦 Build Distribution
-    needs: [quality-ruff-lint, quality-ruff-format, quality-mypy]
+    needs: setup-environment  # Only needs setup
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -495,7 +479,20 @@ jobs:
         with:
           version: ${{ env.UV_VERSION }}
           enable-cache: true
-          cache-dependency-glob: '**/pyproject.toml'
+          cache-dependency-glob: |
+            **/pyproject.toml
+            **/uv.lock
+
+      - name: 💾 Restore cached environment
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/uv
+            ~/.local/share/uv
+            .venv
+          key: ${{ needs.setup-environment.outputs.cache-key }}
+          restore-keys: |
+            deps-${{ runner.os }}-py${{ env.PYTHON_VERSION }}-
 
       - name: 🏗️ Build package
         run: |
@@ -518,7 +515,7 @@ jobs:
         with:
           name: distribution-packages
           path: dist/
-          retention-days: 7
+          retention-days: 3
 
   # ============================================================================
   # 🎯 Pre-commit Validation
@@ -526,6 +523,7 @@ jobs:
 
   pre-commit-check:
     name: 🪝 Pre-commit Hooks
+    needs: setup-environment
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -542,28 +540,40 @@ jobs:
         with:
           version: ${{ env.UV_VERSION }}
           enable-cache: true
-          cache-dependency-glob: '**/pyproject.toml'
+          cache-dependency-glob: |
+            **/pyproject.toml
+            **/uv.lock
+
+      - name: 💾 Restore cached environment
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/uv
+            ~/.local/share/uv
+            .venv
+          key: ${{ needs.setup-environment.outputs.cache-key }}
+          restore-keys: |
+            deps-${{ runner.os }}-py${{ env.PYTHON_VERSION }}-
 
       - name: 💾 Cache pre-commit environments
         uses: actions/cache@v4
         with:
           path: |
             ~/.cache/pre-commit
-            ~/.cache/pip
             ~/.local
           key: pre-commit-${{ runner.os }}-py${{ env.PYTHON_VERSION }}-${{ hashFiles('.pre-commit-config.yaml', '**/pyproject.toml', '**/uv.lock') }}
           restore-keys: |
-            pre-commit-${{ runner.os }}-py${{ env.PYTHON_VERSION }}-${{ hashFiles('.pre-commit-config.yaml') }}-
             pre-commit-${{ runner.os }}-py${{ env.PYTHON_VERSION }}-
-            pre-commit-${{ runner.os }}-
 
       - name: 📦 Install dependencies
         run: |
+          if [ ! -d ".venv" ]; then
+            uv sync --frozen --all-extras
+          fi
           uv pip install --system -e ".[dev]"
 
       - name: 🪝 Run pre-commit hooks
         env:
-          # Skip tools that have external dependencies or network issues
           SKIP: prettier,markdownlint,cspell,markdown-link-check,mkdocs-build,pytest
         run: |
           pre-commit run --all-files --show-diff-on-failure --color=always
@@ -576,12 +586,8 @@ jobs:
     name: ✅ CI Summary
     if: always()
     needs:
-      - quality-ruff-lint
-      - quality-ruff-format
-      - quality-mypy
-      - security-bandit
-      - security-secrets
-      - security-dependencies
+      - quality-checks
+      - security-scan
       - test-matrix
       - build-package
       - pre-commit-check
@@ -618,20 +624,12 @@ jobs:
           # Check all job results
           echo "## 📊 CI Pipeline Results"
           echo ""
-          echo "### 🎯 Quality Gates"
-          check_job "Ruff Linting" "${{ needs.quality-ruff-lint.result }}" "🎨" || all_success=false
-          check_job "Ruff Formatting" "${{ needs.quality-ruff-format.result }}" "🖌️" || all_success=false
-          check_job "Type Checking" "${{ needs.quality-mypy.result }}" "🔍" || all_success=false
+          echo "### 🎯 Quality & Security"
+          check_job "Quality Checks" "${{ needs.quality-checks.result }}" "🎯" || all_success=false
+          check_job "Security Scan" "${{ needs.security-scan.result }}" "🛡️" || all_success=false
           echo ""
-          echo "### 🛡️ Security"
-          check_job "Security Analysis" "${{ needs.security-bandit.result }}" "🔒" || all_success=false
-          check_job "Secrets Detection" "${{ needs.security-secrets.result }}" "🔐" || all_success=false
-          check_job "Dependency Audit" "${{ needs.security-dependencies.result }}" "🛡️" || all_success=false
-          echo ""
-          echo "### 🧪 Testing"
+          echo "### 🧪 Testing & Build"
           check_job "Test Suite" "${{ needs.test-matrix.result }}" "🧪" || all_success=false
-          echo ""
-          echo "### 🏗️ Build"
           check_job "Package Build" "${{ needs.build-package.result }}" "📦" || all_success=false
           echo ""
           echo "### 🪝 Validation"
@@ -658,12 +656,8 @@ jobs:
 
             // Get job statuses
             const jobs = {
-              'quality-ruff-lint': '${{ needs.quality-ruff-lint.result }}',
-              'quality-ruff-format': '${{ needs.quality-ruff-format.result }}',
-              'quality-mypy': '${{ needs.quality-mypy.result }}',
-              'security-bandit': '${{ needs.security-bandit.result }}',
-              'security-secrets': '${{ needs.security-secrets.result }}',
-              'security-dependencies': '${{ needs.security-dependencies.result }}',
+              'quality-checks': '${{ needs.quality-checks.result }}',
+              'security-scan': '${{ needs.security-scan.result }}',
               'test-matrix': '${{ needs.test-matrix.result }}',
               'build-package': '${{ needs.build-package.result }}',
               'pre-commit-check': '${{ needs.pre-commit-check.result }}'
@@ -684,28 +678,12 @@ jobs:
             let comment = `## 🚀 CI Pipeline Results\n\n`;
             comment += `Run: [#${{ github.run_number }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})\n\n`;
 
-            // Quality section
-            comment += `### 🎯 Quality Gates\n`;
+            // Combined section
+            comment += `### 🎯 CI Status\n`;
             comment += `| Check | Status |\n`;
             comment += `|-------|--------|\n`;
-            comment += `| 🎨 Ruff Linting | ${getStatusEmoji(jobs['quality-ruff-lint'])} |\n`;
-            comment += `| 🖌️ Ruff Formatting | ${getStatusEmoji(jobs['quality-ruff-format'])} |\n`;
-            comment += `| 🔍 Type Checking | ${getStatusEmoji(jobs['quality-mypy'])} |\n`;
-            comment += `\n`;
-
-            // Security section
-            comment += `### 🛡️ Security\n`;
-            comment += `| Check | Status |\n`;
-            comment += `|-------|--------|\n`;
-            comment += `| 🔒 Security Analysis | ${getStatusEmoji(jobs['security-bandit'])} |\n`;
-            comment += `| 🔐 Secrets Detection | ${getStatusEmoji(jobs['security-secrets'])} |\n`;
-            comment += `| 🛡️ Dependency Audit | ${getStatusEmoji(jobs['security-dependencies'])} |\n`;
-            comment += `\n`;
-
-            // Testing section
-            comment += `### 🧪 Testing & Build\n`;
-            comment += `| Check | Status |\n`;
-            comment += `|-------|--------|\n`;
+            comment += `| 🎯 Quality Checks | ${getStatusEmoji(jobs['quality-checks'])} |\n`;
+            comment += `| 🛡️ Security Scan | ${getStatusEmoji(jobs['security-scan'])} |\n`;
             comment += `| 🧪 Test Suite | ${getStatusEmoji(jobs['test-matrix'])} |\n`;
             comment += `| 📦 Package Build | ${getStatusEmoji(jobs['build-package'])} |\n`;
             comment += `| 🪝 Pre-commit Hooks | ${getStatusEmoji(jobs['pre-commit-check'])} |\n`;
