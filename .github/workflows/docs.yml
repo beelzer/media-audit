@@ -143,22 +143,15 @@ jobs:
         with:
           fetch-depth: 0  # Full history for git info in docs
 
-      - name: Setup Python with uv
-        uses: astral-sh/setup-uv@v6
+      - name: Setup Python Environment
+        uses: ./.github/actions/setup-python-env
         with:
-          version: ${{ env.UV_VERSION }}
-          enable-cache: true
-          cache-dependency-glob: |
-            **/pyproject.toml
-            **/uv.lock
+          python-version: ${{ env.PYTHON_VERSION }}
+          uv-version: ${{ env.UV_VERSION }}
+          extras: "docs"
 
-      - name: Setup Python ${{ env.PYTHON_VERSION }}
-        run: uv python install ${{ env.PYTHON_VERSION }}
-
-      - name: Install dependencies
-        run: |
-          uv sync --frozen --extra docs
-          uv pip list
+      - name: List installed packages
+        run: uv pip list
 
       - name: Cache MkDocs build
         uses: actions/cache@v4
