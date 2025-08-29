@@ -83,26 +83,30 @@ See [ARM Setup Guide](docs/getting-started/arm-setup.md) for platform-specific i
 - 2GB+ RAM recommended
 - 100MB disk space for application
 
-### Using uv (Recommended)
+### From Source (Currently Required)
+
+> **Note**: Package is not yet published to PyPI. Please install from source for now.
 
 ```bash
-# Install as a tool (recommended)
+# Clone repository
+git clone https://github.com/beelzer/media-audit.git
+cd media-audit
+
+# Install with uv (recommended)
+uv pip install -e .
+
+# Or with pip
+pip install -e .
+```
+
+### Future Installation (Once Published)
+
+```bash
+# Will be available via uv
 uv tool install media-audit
 
-# Or install in current environment
-uv pip install media-audit
-```
-
-### Using pipx
-
-```bash
+# Or via pipx
 pipx install media-audit
-```
-
-### Using pip
-
-```bash
-pip install media-audit
 ```
 
 ### From Source
@@ -265,28 +269,30 @@ cd media-audit
 # Install with dev dependencies using uv
 uv sync --all-extras
 
-# Set up pre-commit hooks
-pre-commit install
-pre-commit run --all-files  # Run on all files once
+# Install pre-commit hooks
+uv run pre-commit install
+
+# Run pre-commit hooks on all files
+uv run pre-commit run --all-files
 ```
 
 ### Running Tests
 
 ```bash
 # Run all tests
-pytest tests/
+uv run pytest tests/
 
 # Run with coverage
-pytest tests/ --cov=src/media_audit --cov-report=html
+uv run pytest tests/ --cov=src/media_audit --cov-report=html
 
 # Run with coverage and generate multiple reports
-pytest tests/ --cov=src/media_audit --cov-report=term-missing --cov-report=html --cov-report=xml
+uv run pytest tests/ --cov=src/media_audit --cov-report=term-missing --cov-report=html --cov-report=xml
 
 # Run specific test file
-pytest tests/test_scanner.py
+uv run pytest tests/test_scanner.py
 
 # Run with verbose output
-pytest tests/ -v
+uv run pytest tests/ -v
 ```
 
 ### Code Coverage
@@ -297,7 +303,7 @@ To view local coverage:
 
 ```bash
 # Generate HTML coverage report
-pytest tests/ --cov=src/media_audit --cov-report=html
+uv run pytest tests/ --cov=src/media_audit --cov-report=html
 
 # Open coverage report in browser
 open htmlcov/index.html  # macOS
@@ -315,19 +321,19 @@ Coverage goals:
 
 ```bash
 # Run linting
-ruff check src tests
+uv run ruff check src tests
 
 # Run formatting
-ruff format src tests
+uv run ruff format src tests
 
 # Run type checking
-mypy src
+uv run mypy src
 
 # Run security checks
-bandit -r src
+uv run bandit -r src
 
 # Run all pre-commit hooks
-pre-commit run --all-files
+uv run pre-commit run --all-files
 ```
 
 ### Pre-commit Hooks
@@ -343,6 +349,8 @@ This project uses pre-commit hooks to ensure code quality. The hooks will run au
 - ✅ Python 3.13+ syntax upgrades
 - ✅ Markdown linting
 - ✅ Spell checking
+- ✅ GitHub Actions workflow linting (actionlint)
+- ✅ Link checking for documentation
 
 ### Building Documentation
 
@@ -377,8 +385,8 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 Please ensure:
 
-- All tests pass (`pytest tests/`)
-- Pre-commit hooks pass (`pre-commit run --all-files`)
+- All tests pass (`uv run pytest tests/`)
+- Pre-commit hooks pass (`uv run pre-commit run --all-files`)
 - Code is properly typed (mypy checks pass)
 - Documentation is updated if needed
 
