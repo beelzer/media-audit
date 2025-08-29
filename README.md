@@ -10,38 +10,42 @@
 [![uv](https://img.shields.io/badge/uv-managed-blue)](https://github.com/astral-sh/uv)
 [![Pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://github.com/pre-commit/pre-commit)
 
-A comprehensive CLI tool for auditing media libraries with beautiful HTML reports. Validates movies and TV shows for proper folder structure, required assets (posters, backgrounds, trailers), and modern video encoding standards.
+A powerful CLI tool for auditing and validating media libraries. Scans your media collection, extracts metadata using FFprobe, validates file integrity and modern video encoding standards, and generates beautiful HTML or JSON reports.
 
 ## ✨ Features
 
-### 🎬 **Movie Validation**
+### 🎬 **Smart Media Detection**
 
-- Checks for poster, background/fanart, and trailer files
-- Validates folder structure: `Movies/Title (YYYY)/`
-- Detects multiple poster/background variants
-- Supports collection organization
+- Automatic parsing of movie and TV show filenames
+- Pattern matching for various naming conventions
+- Season/Episode detection for TV shows
+- Quality detection (720p, 1080p, 4K, etc.)
+- Source detection (BluRay, WEB-DL, HDTV, etc.)
 
-### 📺 **TV Show Validation**
+### 📺 **Media Server Support**
 
-- **Series-level**: poster, background, optional banner
-- **Season-level**: season posters (SeasonXX.jpg)
-- **Episode-level**: video files and title cards
-- Smart episode detection (S01E01, 1x01 formats)
+- **Plex**: Full pattern support for Plex Media Server
+- **Jellyfin**: Compatible with Jellyfin organization
+- **Emby**: Supports Emby folder structures
+- Custom patterns via YAML configuration
 
-### 🎥 **Video Encoding Checks**
+### 🎥 **Deep Media Analysis**
 
-- Validates modern codecs (HEVC/H.265, AV1)
-- Flags legacy H.264 content for re-encoding
-- Uses FFprobe for accurate codec detection
-- Detailed bitrate and resolution analysis
+- FFprobe integration for technical metadata extraction
+- Video codec detection (H.264, H.265/HEVC, AV1, etc.)
+- Audio codec detection (AAC, AC3, DTS, TrueHD, etc.)
+- Resolution and bitrate analysis
+- Duration and file size tracking
+- Subtitle stream detection
 
 ### 📊 **Beautiful Reports**
 
 - Interactive HTML with search/sort/filter
-- Responsive design with fixed header
+- Responsive design with modern UI
 - JSON export for automation
-- Auto-opens in browser
+- Auto-open in browser option
 - Summary statistics dashboard
+- Problems-only view for quick issue identification
 
 ### 🔧 **Flexible Configuration**
 
@@ -93,18 +97,18 @@ pip install -e .
 
 ```bash
 # Basic scan with HTML report
-media-audit scan --roots "D:\Media" --report report.html --open
+media-audit scan -r /media --report report.html --open
 
 # Scan multiple roots with specific profiles
 media-audit scan \
-  --roots "D:\Movies" "E:\TV Shows" \
-  --profiles plex jellyfin \
+  -r /movies -r /tvshows \
+  -p plex -p jellyfin \
   --report audit.html \
   --json audit.json \
   --open
 
 # Show only problems in report
-media-audit scan --roots /media --problems-only --report issues.html
+media-audit scan -r /media --problems-only --report issues.html
 
 # Use custom configuration file
 media-audit scan --config config.yaml
@@ -116,7 +120,7 @@ Create a configuration file for repeated use:
 
 ```bash
 # Generate sample config
-media-audit init-config config.yaml
+media-audit init-config
 ```
 
 Example `config.yaml`:
@@ -124,14 +128,15 @@ Example `config.yaml`:
 ```yaml
 scan:
   root_paths:
-    - D:/Media/Movies
-    - D:/Media/TV Shows
+    - /media/Movies
+    - /media/TVShows
   profiles:
     - plex
     - jellyfin
   allowed_codecs:
-    - hevc
-    - av1
+    - HEVC
+    - H265
+    - AV1
   concurrent_workers: 4
   cache_enabled: true
   include_patterns:
@@ -146,26 +151,22 @@ report:
   json_path: media-audit.json
   auto_open: true
   problems_only: false
-  include_summary: true
+  show_thumbnails: true
 ```
 
-## 📁 Expected Structure
+## 📁 Supported Media Structures
 
 ### Movies
 
 ```text
 Movies/
 ├── The Matrix (1999)/
-│   ├── The Matrix (1999).mkv
-│   ├── poster.jpg
-│   ├── fanart.jpg
-│   └── The Matrix (1999)-trailer.mp4
-└── Inception (2010)/
-    ├── Inception (2010).mkv
-    ├── folder.jpg
-    ├── backdrop.jpg
-    └── Trailers/
-        └── trailer1.mp4
+│   └── The Matrix (1999).mkv
+├── Inception (2010)/
+│   └── Inception (2010) - 1080p BluRay.mkv
+└── Collections/
+    └── Marvel/
+        └── Iron Man (2008).mkv
 ```
 
 ### TV Shows
@@ -173,26 +174,24 @@ Movies/
 ```text
 TV Shows/
 └── Breaking Bad/
-    ├── poster.jpg
-    ├── fanart.jpg
-    ├── banner.jpg
-    ├── Season01.jpg
-    └── Season 01/
-        ├── S01E01.mkv
-        ├── S01E01.jpg
-        ├── S01E02.mkv
-        └── S01E02.jpg
+    ├── Season 01/
+    │   ├── S01E01 - Pilot.mkv
+    │   ├── S01E02 - Cat's in the Bag.mkv
+    │   └── Breaking Bad - S01E03.mkv
+    └── Season 02/
+        ├── Breaking Bad - 2x01.mkv
+        └── Breaking Bad - 2x02.mkv
 ```
 
 ## 🎯 Media Server Profiles
 
 The tool includes preset patterns for popular media servers:
 
-| Server | Poster | Background | Trailer | Notes |
-|--------|--------|------------|---------|-------|
-| **Plex** | `poster.jpg` | `fanart.jpg` | `*-trailer.mp4` | Also supports `folder.jpg` |
-| **Jellyfin** | `folder.jpg` | `backdrop.jpg` | `*.trailer.mp4` | Flexible naming |
-| **Emby** | `folder.jpg` | `backdrop.jpg` | in `Trailers/` | Supports `extrafanart/` |
+| Server | Movie Pattern | TV Pattern | Episode Pattern |
+|--------|--------------|------------|----------------|
+| **Plex** | `Title (Year)` | `Show/Season ##/` | `S##E##` |
+| **Jellyfin** | `Title (Year)` | `Show/Season ##/` | `S##E##`, `#x##` |
+| **Emby** | `Title (Year)` | `Show/Season ##/` | `S##E##`, `#x##` |
 
 ## 📋 Command Reference
 
@@ -221,10 +220,10 @@ Options:
 ### Init Config Command
 
 ```bash
-media-audit init-config [OPTIONS] OUTPUT_PATH
+media-audit init-config [OPTIONS]
 
 Options:
-  --full                     Generate full config with all options
+  --output PATH              Output path for config file (default: config.yaml)
   --help                     Show this message and exit
 ```
 
