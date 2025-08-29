@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import shutil
 import subprocess
@@ -70,6 +71,96 @@ class FFProbe:
             return {}
         except (json.JSONDecodeError, FileNotFoundError):
             return {}
+
+    async def probe_async(self, file_path: Path) -> dict[str, Any]:
+        """Asynchronously probe a video file for metadata."""
+        # Check cache first
+        if self.cache:
+            cached_data = await self.cache.get_probe_data_async(file_path)
+            if cached_data is not None:
+                return cached_data
+
+        # Probe the file
+        cmd = [
+            self.ffprobe_path,
+            "-v",
+            "quiet",
+            "-print_format",
+            "json",
+            "-show_format",
+            "-show_streams",
+            str(file_path),
+        ]
+
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                *cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
+            )
+            stdout, stderr = await proc.communicate()
+
+            if proc.returncode != 0:
+                if stderr:
+                    import logging
+
+                    logging.getLogger("media_audit.probe").warning(
+                        f"FFprobe error for {file_path}: {stderr.decode('utf-8', errors='replace')}"
+                    )
+                return {}
+
+            data = json.loads(stdout.decode("utf-8", errors="replace"))
+
+            # Cache the result
+            if self.cache and data:
+                await self.cache.set_probe_data_async(file_path, data)
+
+            return data  # type: ignore[no-any-return]
+        except (json.JSONDecodeError, FileNotFoundError):
+            return {}
+        except Exception:
+            return {}
+
+    async def get_video_info_async(self, file_path: Path) -> VideoInfo:
+        """Asynchronously extract video information from file."""
+        info = VideoInfo(path=file_path)
+
+        try:
+            data = await self.probe_async(file_path)
+            info.raw_info = data
+
+            # Get format info
+            if "format" in data:
+                format_data = data["format"]
+                info.duration = float(format_data.get("duration", 0))
+                info.bitrate = int(format_data.get("bit_rate", 0))
+                info.size = int(format_data.get("size", 0))
+
+            # Find video stream
+            video_stream = None
+            for stream in data.get("streams", []):
+                if stream.get("codec_type") == "video":
+                    video_stream = stream
+                    break
+
+            if video_stream:
+                # Extract codec
+                codec_name = video_stream.get("codec_name", "").lower()
+                info.codec = self._map_codec(codec_name)
+
+                # Extract resolution
+                width = video_stream.get("width")
+                height = video_stream.get("height")
+                if width and height:
+                    info.resolution = (int(width), int(height))
+
+        except Exception as e:
+            # Log unexpected errors
+            import logging
+
+            logging.getLogger("media_audit.probe").debug(
+                f"Unexpected error probing {file_path}: {e}"
+            )
+
+        return info
 
     def get_video_info(self, file_path: Path) -> VideoInfo:
         """Extract video information from file."""
@@ -150,3 +241,9 @@ def probe_video(file_path: Path, cache: MediaCache | None = None) -> VideoInfo:
         return probe.get_video_info(file_path)
     else:
         return _get_default_probe().get_video_info(file_path)
+
+
+async def probe_video_async(file_path: Path, cache: MediaCache | None = None) -> VideoInfo:
+    """Asynchronously probe a video file using FFProbe instance."""
+    probe = FFProbe(cache=cache) if cache else FFProbe()
+    return await probe.get_video_info_async(file_path)

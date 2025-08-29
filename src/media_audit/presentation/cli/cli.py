@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import sys
 import webbrowser
 from pathlib import Path
@@ -217,7 +218,9 @@ def scan(
     console.print(f"[dim]Scanning {len(cfg.scan.root_paths)} root path(s)...[/dim]\n")
 
     scanner = MediaScanner(cfg.scan)
-    result = scanner.scan()
+
+    # Run async scan
+    result = asyncio.run(scanner.scan_async())
 
     # Display results summary
     _display_summary(result)

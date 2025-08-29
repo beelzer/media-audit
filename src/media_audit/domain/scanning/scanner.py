@@ -25,12 +25,14 @@ Example:
 
 from __future__ import annotations
 
+import asyncio
 import concurrent.futures
 import sys
 import threading
 import time
 from datetime import datetime
 from pathlib import Path
+from typing import TYPE_CHECKING, Any
 
 from rich.console import Console
 from rich.progress import (
@@ -43,8 +45,10 @@ from media_audit.core import MovieItem, ScanResult, SeriesItem
 from media_audit.domain.parsing import MovieParser, TVParser
 from media_audit.domain.validation import MediaValidator
 from media_audit.infrastructure.cache import MediaCache
-from media_audit.infrastructure.config import ScanConfig
 from media_audit.shared.logging import get_logger
+
+if TYPE_CHECKING:
+    from media_audit.infrastructure.config import ScanConfig
 
 
 class MediaScanner:
@@ -154,6 +158,70 @@ class MediaScanner:
         with self._cancel_lock:
             return self._cancelled
 
+    async def scan_async(self) -> ScanResult:
+        """Asynchronously scan media libraries based on configuration.
+
+        Main async entry point for the scanning process. Discovers and processes
+        all media in configured root paths.
+
+        Returns:
+            ScanResult: Comprehensive scan results with all discovered media
+
+        """
+        result = ScanResult(
+            scan_time=datetime.now(),
+            duration=0,
+            root_paths=self.config.root_paths,
+            errors=[],
+        )
+
+        # Start ESC key monitoring in background thread
+        esc_thread = threading.Thread(target=self._check_for_esc, daemon=True)
+        esc_thread.start()
+
+        start_time = time.time()
+
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            console=self.console,
+            transient=True,
+        ) as progress:
+            task = progress.add_task("[bold cyan]Starting media scan...", total=None)
+
+            # Process each root path
+            for root_path in self.config.root_paths:
+                if self.is_cancelled():
+                    result.errors.append("Scan cancelled by user")
+                    break
+
+                if not root_path.exists():
+                    error_msg = f"Root path does not exist: {root_path}"
+                    self.logger.error(error_msg)
+                    result.errors.append(error_msg)
+                    continue
+
+                progress.update(
+                    task,
+                    description=f"Discovering media in {root_path}... [dim](Press ESC to cancel)[/dim]",
+                )
+                await self._scan_path_async(root_path, result, progress)
+
+        # Update duration
+        result.duration = time.time() - start_time
+        result.update_stats()
+
+        # Show cache statistics
+        if self.cache.enabled:
+            stats = self.cache.get_stats()
+            if stats["total"] > 0:
+                self.console.print(
+                    f"\n[dim]Cache: {stats['hits']} hits, {stats['misses']} misses "
+                    f"({stats['hit_rate']:.1f}% hit rate)[/dim]"
+                )
+
+        return result
+
     def scan(self) -> ScanResult:
         """Scan all configured root paths for media content.
 
@@ -226,6 +294,45 @@ class MediaScanner:
 
         return result
 
+    async def _scan_path_async(
+        self, path: Path, result: ScanResult, progress: Progress | None = None
+    ) -> None:
+        """Asynchronously scan a single root path for media content.
+
+        Looks for standard media directories (Movies, TV Shows) and processes
+        their contents. Falls back to mixed content scanning if standard
+        directories are not found.
+
+        Args:
+            path: Root path to scan
+            result: ScanResult object to populate
+            progress: Optional progress tracker for UI updates
+
+        """
+        # Look for Movies and TV directories
+        movies_dir = path / "Movies"
+        tv_dir = path / "TV Shows"
+
+        # Also check alternative names
+        if not tv_dir.exists():
+            tv_dir = path / "TV"
+        if not tv_dir.exists():
+            tv_dir = path / "Series"
+
+        # Scan movies and TV shows concurrently
+        tasks = []
+        if movies_dir.exists():
+            tasks.append(self._scan_movies_async(movies_dir, result, progress, force_type="movie"))
+        if tv_dir.exists():
+            tasks.append(self._scan_tv_shows_async(tv_dir, result, progress, force_type="tv"))
+
+        # Also scan root directory if no standard folders found
+        if not movies_dir.exists() and not tv_dir.exists():
+            tasks.append(self._scan_mixed_content_async(path, result, progress))
+
+        if tasks:
+            await asyncio.gather(*tasks)
+
     def _scan_path(self, path: Path, result: ScanResult, progress: Progress | None = None) -> None:
         """Scan a single root path for media content.
 
@@ -260,6 +367,68 @@ class MediaScanner:
         # Also scan root directory if no standard folders found
         if not movies_dir.exists() and not tv_dir.exists():
             self._scan_mixed_content(path, result, progress)
+
+    async def _scan_movies_async(
+        self,
+        movies_dir: Path,
+        result: ScanResult,
+        progress: Progress | None = None,
+        force_type: str | None = None,
+    ) -> None:
+        """Asynchronously scan a directory containing movies.
+
+        Processes each subdirectory as a potential movie, using concurrent
+        async tasks. Updates progress in real-time.
+
+        Args:
+            movies_dir: Directory containing movie folders
+            result: ScanResult to populate with found movies
+            progress: Optional progress tracker
+            force_type: Force content type (unused, for consistency)
+
+        """
+        movie_dirs = [d for d in movies_dir.iterdir() if d.is_dir() and not d.name.startswith(".")]
+        total_movies = len(movie_dirs)
+
+        # Create a progress task for movies
+        if progress:
+            movie_task = progress.add_task(
+                f"[cyan]Scanning {total_movies} movies... [dim](ESC to cancel)[/dim][/cyan]",
+                total=total_movies,
+            )
+
+        # Process movies concurrently with semaphore to limit concurrency
+        semaphore = asyncio.Semaphore(self.config.concurrent_workers)
+
+        async def process_with_semaphore(movie_dir: Path) -> MovieItem | None:
+            async with semaphore:
+                return await self._process_movie_async(movie_dir)
+
+        tasks = []
+        for movie_dir in movie_dirs:
+            if self.is_cancelled():
+                break
+            tasks.append(process_with_semaphore(movie_dir))
+
+        # Process all movies concurrently
+        for i, coro in enumerate(asyncio.as_completed(tasks), 1):
+            if self.is_cancelled():
+                break
+            try:
+                movie = await coro
+                if movie:
+                    result.movies.append(movie)
+                    if progress:
+                        progress.update(
+                            movie_task,
+                            advance=1,
+                            description=f"[cyan]Movies: {i}/{total_movies} - {movie.name}[/cyan]",
+                        )
+            except Exception as e:
+                self.logger.exception(f"Error processing movie: {e}")
+                result.errors.append(f"Error processing movie: {str(e)}")
+                if progress:
+                    progress.update(movie_task, advance=1)
 
     def _scan_movies(
         self,
@@ -342,6 +511,69 @@ class MediaScanner:
                     result.errors.append(f"Error processing {movie_dir.name}: {str(e)}")
                     if progress:
                         progress.update(movie_task, advance=1)
+
+    async def _scan_tv_shows_async(
+        self,
+        tv_dir: Path,
+        result: ScanResult,
+        progress: Progress | None = None,
+        force_type: str | None = None,
+    ) -> None:
+        """Asynchronously scan a directory containing TV series.
+
+        Processes each subdirectory as a potential TV series, with support
+        for concurrent async processing. Each series is parsed with its complete
+        season and episode hierarchy.
+
+        Args:
+            tv_dir: Directory containing TV series folders
+            result: ScanResult to populate with found series
+            progress: Optional progress tracker
+            force_type: Force content type (unused, for consistency)
+
+        """
+        series_dirs = [d for d in tv_dir.iterdir() if d.is_dir() and not d.name.startswith(".")]
+        total_series = len(series_dirs)
+
+        # Create a progress task for TV shows
+        if progress:
+            tv_task = progress.add_task(
+                f"[magenta]Scanning {total_series} TV series... [dim](ESC to cancel)[/dim][/magenta]",
+                total=total_series,
+            )
+
+        # Process series concurrently with semaphore to limit concurrency
+        semaphore = asyncio.Semaphore(self.config.concurrent_workers)
+
+        async def process_with_semaphore(series_dir: Path) -> SeriesItem | None:
+            async with semaphore:
+                return await self._process_series_async(series_dir)
+
+        tasks = []
+        for series_dir in series_dirs:
+            if self.is_cancelled():
+                break
+            tasks.append(process_with_semaphore(series_dir))
+
+        # Process all series concurrently
+        for i, coro in enumerate(asyncio.as_completed(tasks), 1):
+            if self.is_cancelled():
+                break
+            try:
+                series = await coro
+                if series:
+                    result.series.append(series)
+                    if progress:
+                        progress.update(
+                            tv_task,
+                            advance=1,
+                            description=f"[magenta]TV Series: {i}/{total_series} - {series.name}[/magenta]",
+                        )
+            except Exception as e:
+                self.logger.exception(f"Error processing series: {e}")
+                result.errors.append(f"Error processing series: {str(e)}")
+                if progress:
+                    progress.update(tv_task, advance=1)
 
     def _scan_tv_shows(
         self,
@@ -426,6 +658,80 @@ class MediaScanner:
                     if progress:
                         progress.update(tv_task, advance=1)
 
+    async def _scan_mixed_content_async(
+        self, path: Path, result: ScanResult, progress: Progress | None = None
+    ) -> None:
+        """Asynchronously scan a directory that might contain both movies and TV shows.
+
+        Analyzes each subdirectory to determine if it's a movie or TV series
+        based on content structure. TV series are detected by presence of
+        season folders.
+
+        Args:
+            path: Directory to scan for mixed content
+            result: ScanResult to populate with discovered items
+            progress: Optional progress tracker
+
+        """
+        items = [d for d in path.iterdir() if d.is_dir() and not d.name.startswith(".")]
+        total_items = len(items)
+
+        if progress:
+            mixed_task = progress.add_task(
+                f"[yellow]Scanning {total_items} items... [dim](ESC to cancel)[/dim][/yellow]",
+                total=total_items,
+            )
+
+        # Process items concurrently with semaphore
+        semaphore = asyncio.Semaphore(self.config.concurrent_workers)
+
+        async def process_item(item: Path) -> tuple[str, Any | None]:
+            async with semaphore:
+                if self.tv_parser.is_tv_directory(item):
+                    series = await self._process_series_async(item)
+                    return ("series", series)
+                elif self.movie_parser.is_movie_directory(item):
+                    movie = await self._process_movie_async(item)
+                    return ("movie", movie)
+                return ("unknown", None)
+
+        tasks = []
+        for item in items:
+            if self.is_cancelled():
+                break
+            tasks.append(process_item(item))
+
+        # Process all items concurrently
+        for i, coro in enumerate(asyncio.as_completed(tasks), 1):
+            if self.is_cancelled():
+                break
+            try:
+                item_type, media_item = await coro
+                if item_type == "series" and media_item:
+                    result.series.append(media_item)
+                    if progress:
+                        progress.update(
+                            mixed_task,
+                            advance=1,
+                            description=f"[yellow]Items: {i}/{total_items} - TV Series: {media_item.name}[/yellow]",
+                        )
+                elif item_type == "movie" and media_item:
+                    result.movies.append(media_item)
+                    if progress:
+                        progress.update(
+                            mixed_task,
+                            advance=1,
+                            description=f"[yellow]Items: {i}/{total_items} - Movie: {media_item.name}[/yellow]",
+                        )
+                else:
+                    if progress:
+                        progress.update(mixed_task, advance=1)
+            except Exception as e:
+                self.logger.exception(f"Error processing item: {e}")
+                result.errors.append(f"Error processing item: {str(e)}")
+                if progress:
+                    progress.update(mixed_task, advance=1)
+
     def _scan_mixed_content(
         self, path: Path, result: ScanResult, progress: Progress | None = None
     ) -> None:
@@ -490,6 +796,28 @@ class MediaScanner:
                 if progress:
                     progress.update(mixed_task, advance=1)
 
+    async def _process_movie_async(self, directory: Path) -> MovieItem | None:
+        """Asynchronously process a single movie directory.
+
+        Parses movie metadata and runs validation checks.
+
+        Args:
+            directory: Path to movie directory
+
+        Returns:
+            MovieItem: Parsed and validated movie, or None if parsing failed
+
+        """
+        try:
+            movie = await self.movie_parser.parse_async(directory)
+            if movie:
+                await self.validator.validate_movie_async(movie)
+                self.logger.debug(f"Processed movie: {movie.name}")
+            return movie
+        except Exception as e:
+            self.logger.error(f"Failed to process movie {directory}: {e}")
+            return None
+
     def _process_movie(self, directory: Path) -> MovieItem | None:
         """Process a single movie directory.
 
@@ -510,6 +838,29 @@ class MediaScanner:
             return movie
         except Exception as e:
             self.logger.error(f"Failed to process movie {directory}: {e}")
+            return None
+
+    async def _process_series_async(self, directory: Path) -> SeriesItem | None:
+        """Asynchronously process a single TV series directory.
+
+        Parses series structure including all seasons and episodes,
+        then runs validation checks.
+
+        Args:
+            directory: Path to series directory
+
+        Returns:
+            SeriesItem: Parsed and validated series, or None if parsing failed
+
+        """
+        try:
+            series = await self.tv_parser.parse_async(directory)
+            if series:
+                await self.validator.validate_series_async(series)
+                self.logger.debug(f"Processed series: {series.name}")
+            return series
+        except Exception as e:
+            self.logger.error(f"Failed to process series {directory}: {e}")
             return None
 
     def _process_series(self, directory: Path) -> SeriesItem | None:

@@ -29,6 +29,7 @@ dependencies = [
     "rich>=14.1.0",
     "pydantic>=2.11.7",
     "typing-extensions>=4.15.0",
+    "aiofiles>=24.1.0",
 ]
 
 [project.optional-dependencies]
@@ -39,6 +40,7 @@ dev = [
     "ruff>=0.12.10",
     "mypy>=1.17.1",
     "types-pyyaml>=6.0.12.20250822",
+    "types-aiofiles>=24.1.0",
     "pre-commit>=4.3.0",
     "bandit>=1.8.6",
     "detect-secrets>=1.5.0",
@@ -97,6 +99,10 @@ enable_incomplete_feature = ["NewGenericSyntax"]
 
 [[tool.mypy.overrides]]
 module = "rich.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "aiofiles.*"
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]

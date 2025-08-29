@@ -2,9 +2,13 @@
 
 from __future__ import annotations
 
+import asyncio
+import contextlib
 import re
 from pathlib import Path
 from typing import Any
+
+import aiofiles
 
 from media_audit.core import (
     EpisodeItem,
@@ -26,6 +30,64 @@ class TVParser(BaseParser):
         """Initialize TV parser."""
         super().__init__(*args, **kwargs)
         self.logger = get_logger("parser.tv")
+
+    async def parse_async(self, directory: Path) -> SeriesItem | None:
+        """Asynchronously parse a TV series directory."""
+        if not directory.is_dir():
+            self.logger.debug(f"Skipping non-directory: {directory}")
+            return None
+
+        self.logger.debug(f"Parsing TV series: {directory.name}")
+        series_name = directory.name
+
+        # Create series item
+        series = SeriesItem(
+            path=directory,
+            name=series_name,
+            type=MediaType.TV_SERIES,
+        )
+
+        # Check for .plexmatch file with metadata
+        plexmatch_file = directory / ".plexmatch"
+        if plexmatch_file.exists():
+            await self._parse_plexmatch_async(plexmatch_file, series)
+
+        # Scan for series-level assets
+        series.assets = self.scan_series_assets(directory)
+
+        # Find and parse seasons
+        season_dirs = self.find_season_directories(directory)
+
+        # Parse seasons concurrently
+        season_tasks = [
+            self.parse_season_async(season_dir, series.path) for season_dir in sorted(season_dirs)
+        ]
+        seasons = await asyncio.gather(*season_tasks)
+
+        for season in seasons:
+            if season:
+                series.seasons.append(season)
+
+        # Also check for episodes directly in series folder (single season shows)
+        root_episodes = self.find_episodes(directory)
+        if root_episodes and not series.seasons:
+            # Create implicit Season 1
+            season = SeasonItem(
+                path=directory,
+                name="Season 1",
+                season_number=1,
+                type=MediaType.TV_SEASON,
+            )
+            for ep_path, ep_info in root_episodes:
+                episode = self.create_episode(ep_path, ep_info)
+                if episode:
+                    season.episodes.append(episode)
+
+            if season.episodes:
+                series.seasons.append(season)
+
+        # Episode count is calculated automatically via property
+        return series
 
     def parse(self, directory: Path) -> SeriesItem | None:
         """Parse a TV series directory."""
@@ -79,6 +141,34 @@ class TVParser(BaseParser):
 
         # Episode count is calculated automatically via property
         return series
+
+    async def parse_season_async(self, directory: Path, series_path: Path) -> SeasonItem | None:
+        """Asynchronously parse a season directory."""
+        season_number = self.extract_season_number(directory.name)
+        if season_number is None:
+            return None
+
+        season = SeasonItem(
+            path=directory,
+            name=directory.name,
+            season_number=season_number,
+            type=MediaType.TV_SEASON,
+        )
+
+        # Scan for season-level assets
+        season.assets = self.scan_season_assets(directory, season_number)
+
+        # Find episodes
+        episodes = self.find_episodes(directory)
+        for ep_path, ep_info in episodes:
+            episode = self.create_episode(ep_path, ep_info)
+            if episode:
+                season.episodes.append(episode)
+
+        # Sort episodes by episode number
+        season.episodes.sort(key=lambda e: (e.season_number, e.episode_number))
+
+        return season
 
     def parse_season(self, directory: Path, series_path: Path) -> SeasonItem | None:
         """Parse a season directory."""
@@ -280,6 +370,30 @@ class TVParser(BaseParser):
         )
 
         return has_season_folders
+
+    async def _parse_plexmatch_async(self, plexmatch_file: Path, series: SeriesItem) -> None:
+        """Asynchronously parse .plexmatch file for metadata."""
+        try:
+            async with aiofiles.open(plexmatch_file, encoding="utf-8") as f:
+                content = await f.read()
+                for line in content.split("\n"):
+                    line = line.strip()
+                    if ":" in line:
+                        key, value = line.split(":", 1)
+                        key = key.strip()
+                        value = value.strip()
+
+                        if key == "title":
+                            series.name = value
+                        elif key == "year":
+                            with contextlib.suppress(ValueError):
+                                series.year_started = int(value)
+                        elif key in {"imdbid", "imdb_id"}:
+                            series.imdb_id = value
+                        elif key in {"tvdbid", "tvdb_id"}:
+                            series.tvdb_id = value
+        except Exception as e:
+            self.logger.debug(f"Failed to parse plexmatch file: {e}")
 
     def _parse_plexmatch(self, plexmatch_file: Path, series: SeriesItem) -> None:
         """Parse .plexmatch file for metadata."""
