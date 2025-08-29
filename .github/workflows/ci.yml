@@ -320,14 +320,15 @@ jobs:
             arch: arm64
             python: '3.13'
             coverage: false
-          # Windows ARM (Beta - Public repos only)
-          - os: windows-11-arm
-            os-name: Windows
-            os-emoji: 🪟
-            arch: arm64
-            python: '3.13'
-            coverage: false
-            skip-ffmpeg-action: true  # Need alternative FFmpeg install
+          # Windows ARM - Disabled until uv supports Windows ARM64
+          # Note: windows-11-arm runner exists but uv doesn't support aarch64-pc-windows-msvc yet
+          # - os: windows-11-arm
+          #   os-name: Windows
+          #   os-emoji: 🪟
+          #   arch: arm64
+          #   python: '3.13'
+          #   coverage: false
+          #   skip-ffmpeg-action: true
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
     steps:
@@ -362,20 +363,21 @@ jobs:
           ffmpeg -version
           ffprobe -version
 
-      - name: 🎥 Setup FFmpeg (Windows ARM)
-        if: matrix.os == 'windows-11-arm'
-        shell: pwsh
-        run: |
-          # Download FFmpeg build (using x64 build until ARM64 builds are available)
-          # Note: This may need adjustment when native ARM64 builds are released
-          $ffmpegUrl = "https://github.com/BtbN/FFmpeg-Builds/releases/latest/download/ffmpeg-master-latest-win64-gpl.zip"
-          Invoke-WebRequest -Uri $ffmpegUrl -OutFile ffmpeg.zip
-          Expand-Archive -Path ffmpeg.zip -DestinationPath .
-          $ffmpegDir = Get-ChildItem -Directory -Filter "ffmpeg-*" | Select-Object -First 1
-          $env:PATH = "$($ffmpegDir.FullName)\bin;$env:PATH"
-          echo "$($ffmpegDir.FullName)\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-          ffmpeg -version
-          ffprobe -version
+      # Windows ARM FFmpeg setup - disabled until uv supports Windows ARM64
+      # - name: 🎥 Setup FFmpeg (Windows ARM)
+      #   if: matrix.os == 'windows-11-arm'
+      #   shell: pwsh
+      #   run: |
+      #     # Download FFmpeg build (using x64 build until ARM64 builds are available)
+      #     # Note: This may need adjustment when native ARM64 builds are released
+      #     $ffmpegUrl = "https://github.com/BtbN/FFmpeg-Builds/releases/latest/download/ffmpeg-master-latest-win64-gpl.zip"
+      #     Invoke-WebRequest -Uri $ffmpegUrl -OutFile ffmpeg.zip
+      #     Expand-Archive -Path ffmpeg.zip -DestinationPath .
+      #     $ffmpegDir = Get-ChildItem -Directory -Filter "ffmpeg-*" | Select-Object -First 1
+      #     $env:PATH = "$($ffmpegDir.FullName)\bin;$env:PATH"
+      #     echo "$($ffmpegDir.FullName)\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+      #     ffmpeg -version
+      #     ffprobe -version
 
       - name: 🔧 Install dependencies
         run: uv sync --frozen --all-extras
