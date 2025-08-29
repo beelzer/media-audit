@@ -67,6 +67,14 @@ class MovieParser(BaseParser):
         if video_files:
             # Get file sizes asynchronously
             async def get_size(path: Path) -> tuple[Path, int]:
+                """Get file size for a given path.
+
+                Args:
+                    path: Path to the file
+
+                Returns:
+                    tuple: Path and its size in bytes
+                """
                 return (path, path.stat().st_size)
 
             sizes = await asyncio.gather(*[get_size(p) for p in video_files])

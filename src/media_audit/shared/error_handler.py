@@ -197,6 +197,15 @@ def handle_errors(
     """
 
     def wrapper(*args: Any, **kwargs: Any) -> T | None:
+        """Execute function with error handling.
+
+        Args:
+            *args: Positional arguments to pass to wrapped function
+            **kwargs: Keyword arguments to pass to wrapped function
+
+        Returns:
+            T | None: Function result or None if error occurred
+        """
         try:
             return func(*args, **kwargs)
         except Exception as e:

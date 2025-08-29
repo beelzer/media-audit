@@ -8,7 +8,7 @@ import logging
 import shutil
 import subprocess
 from contextlib import suppress
-from functools import cache
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
@@ -94,13 +94,13 @@ class FFProbe:
                     )
                 return {}
 
-            data = json.loads(stdout.decode("utf-8", errors="replace"))
+            data: dict[str, Any] = json.loads(stdout.decode("utf-8", errors="replace"))
 
             # Cache the result
             if self.cache and data:
                 await self.cache.set_probe_data(file_path, data)
 
-            return data  # type: ignore[no-any-return]
+            return data
         except (json.JSONDecodeError, FileNotFoundError) as e:
             self.logger.warning(f"Failed to probe {file_path}: {e}")
             return {}
@@ -187,9 +187,16 @@ class FFProbe:
                 return CodecType.UNKNOWN
 
 
-@cache
+@lru_cache(maxsize=128)
 def _get_default_probe() -> FFProbe:
-    """Get default FFProbe instance (singleton)."""
+    """Get default FFProbe instance (singleton).
+
+    Uses LRU cache to prevent memory leaks while maintaining
+    performance benefits of caching.
+
+    Returns:
+        FFProbe: Cached FFProbe instance
+    """
     return FFProbe()
 
 

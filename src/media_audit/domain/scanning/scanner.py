@@ -297,6 +297,14 @@ class MediaScanner:
         semaphore = asyncio.Semaphore(self.config.concurrent_workers)
 
         async def process_with_semaphore(movie_dir: Path) -> MovieItem | None:
+            """Process movie directory with concurrency control.
+
+            Args:
+                movie_dir: Path to movie directory
+
+            Returns:
+                MovieItem | None: Processed movie item or None if failed
+            """
             async with semaphore:
                 return await self._process_movie(movie_dir)
 
@@ -391,6 +399,14 @@ class MediaScanner:
         semaphore = asyncio.Semaphore(self.config.concurrent_workers)
 
         async def process_with_semaphore(series_dir: Path) -> SeriesItem | None:
+            """Process TV series directory with concurrency control.
+
+            Args:
+                series_dir: Path to TV series directory
+
+            Returns:
+                SeriesItem | None: Processed series item or None if failed
+            """
             async with semaphore:
                 return await self._process_series(series_dir)
 
@@ -479,6 +495,14 @@ class MediaScanner:
         semaphore = asyncio.Semaphore(self.config.concurrent_workers)
 
         async def process_item(item: Path) -> tuple[str, Any | None]:
+            """Process a mixed media item (movie or TV show).
+
+            Args:
+                item: Path to media directory
+
+            Returns:
+                tuple: Media type ('movie' or 'tv') and processed item or None
+            """
             async with semaphore:
                 if self.tv_parser.is_tv_directory(item):
                     series = await self._process_series(item)

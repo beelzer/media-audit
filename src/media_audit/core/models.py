@@ -13,6 +13,15 @@ from .enums import CodecType, MediaType, ValidationStatus
 type Resolution = tuple[int, int]
 type PathLike = Path | str
 
+# Resolution constants
+RESOLUTION_4K = (3840, 2160)
+RESOLUTION_1080P = (1920, 1080)
+RESOLUTION_720P = (1280, 720)
+
+# Bitrate thresholds (in bits per second)
+BITRATE_1080P_MIN = 5_000_000  # 5 Mbps minimum for good quality 1080p
+BITRATE_4K_MIN = 15_000_000  # 15 Mbps minimum for good quality 4K
+
 
 @dataclass(slots=True, frozen=False)
 class ValidationIssue:
@@ -61,10 +70,10 @@ class VideoInfo:
         width, height = self.resolution
         # Using match/case for quality assessment
         match (width, height):
-            case (w, h) if w >= 3840 and h >= 2160:  # 4K
+            case (w, h) if w >= RESOLUTION_4K[0] and h >= RESOLUTION_4K[1]:  # 4K
                 return True
-            case (w, h) if w >= 1920 and h >= 1080:  # Full HD
-                return bool(self.bitrate and self.bitrate >= 5_000_000)
+            case (w, h) if w >= RESOLUTION_1080P[0] and h >= RESOLUTION_1080P[1]:  # Full HD
+                return bool(self.bitrate and self.bitrate >= BITRATE_1080P_MIN)
             case _:
                 return False
 
