@@ -57,7 +57,8 @@ def test_extract_source(movie_parser):
     assert movie_parser.extract_source("No source.mkv") is None
 
 
-def test_movie_metadata_parsing(movie_parser, tmp_path):
+@pytest.mark.asyncio
+async def test_movie_metadata_parsing(movie_parser, tmp_path):
     """Test complete movie metadata extraction."""
     # Create movie directory with metadata in name
     movie_dir = tmp_path / "Jason X (2001) {imdb-tt0211443}"
@@ -68,7 +69,7 @@ def test_movie_metadata_parsing(movie_parser, tmp_path):
     video_file.write_text("")
 
     # Parse movie
-    movie = movie_parser.parse(movie_dir)
+    movie = await movie_parser.parse(movie_dir)
 
     assert movie is not None
     assert movie.name == "Jason X"
@@ -79,7 +80,8 @@ def test_movie_metadata_parsing(movie_parser, tmp_path):
     assert movie.release_group == "RARBG"
 
 
-def test_episode_metadata_parsing(tv_parser, tmp_path):
+@pytest.mark.asyncio
+async def test_episode_metadata_parsing(tv_parser, tmp_path):
     """Test episode metadata extraction."""
     # Create series directory
     series_dir = tmp_path / "Peacemaker (2022)"
@@ -97,7 +99,7 @@ def test_episode_metadata_parsing(tv_parser, tmp_path):
     episode_file.write_text("")
 
     # Parse series
-    series = tv_parser.parse(series_dir)
+    series = await tv_parser.parse(series_dir)
 
     assert series is not None
     assert len(series.seasons) == 1
@@ -111,7 +113,8 @@ def test_episode_metadata_parsing(tv_parser, tmp_path):
     assert episode.metadata["release_group"] == "successfulcrab"
 
 
-def test_plexmatch_parsing(tv_parser, tmp_path):
+@pytest.mark.asyncio
+async def test_plexmatch_parsing(tv_parser, tmp_path):
     """Test .plexmatch file parsing."""
     # Create series directory
     series_dir = tmp_path / "Test Series"
@@ -128,7 +131,7 @@ TmdbId: 110492
     (series_dir / "Season 1").mkdir()
 
     # Parse series
-    series = tv_parser.parse(series_dir)
+    series = await tv_parser.parse(series_dir)
 
     assert series is not None
     assert series.tvdb_id == "391153"

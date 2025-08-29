@@ -73,6 +73,23 @@ class MediaValidator:
         self.cache = cache
         self.logger = get_logger("validator")
 
+    async def validate(self, item: MediaItem) -> None:
+        """Validate any media item by dispatching to appropriate validator.
+
+        Args:
+            item: Media item to validate
+        """
+        from media_audit.core import MediaType
+
+        if item.type == MediaType.MOVIE:
+            await self.validate_movie(item)  # type: ignore[arg-type]
+        elif item.type == MediaType.TV_SERIES:
+            await self.validate_series(item)  # type: ignore[arg-type]
+        elif item.type == MediaType.TV_SEASON:
+            await self.validate_season(item)  # type: ignore[arg-type]
+        elif item.type == MediaType.TV_EPISODE:
+            await self.validate_episode(item)  # type: ignore[arg-type]
+
     async def validate_movie(self, movie: MovieItem) -> None:
         """Validate a movie for required assets and encoding.
 

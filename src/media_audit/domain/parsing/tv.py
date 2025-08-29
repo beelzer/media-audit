@@ -299,7 +299,7 @@ class TVParser(BaseParser):
                     line = line.strip()
                     if ":" in line:
                         key, value = line.split(":", 1)
-                        key = key.strip()
+                        key = key.strip().lower()  # Make case-insensitive
                         value = value.strip()
 
                         if key == "title":
@@ -311,5 +311,7 @@ class TVParser(BaseParser):
                             series.imdb_id = value
                         elif key in {"tvdbid", "tvdb_id"}:
                             series.tvdb_id = value
+                        elif key in {"tmdbid", "tmdb_id"}:
+                            series.tmdb_id = value
         except Exception as e:
             self.logger.debug(f"Failed to parse plexmatch file: {e}")

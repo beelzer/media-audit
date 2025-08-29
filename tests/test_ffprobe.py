@@ -73,14 +73,13 @@ def test_parse_codec_type():
     assert ffprobe._map_codec("unknown") == CodecType.UNKNOWN
 
 
-def test_probe_success(ffprobe_instance, mock_ffprobe_output):
+@pytest.mark.asyncio
+async def test_probe_success(ffprobe_instance, mock_ffprobe_output):
     """Test successful video probing."""
-    with patch("subprocess.run") as mock_run:
-        mock_run.return_value = MagicMock(
-            returncode=0, stdout=json.dumps(mock_ffprobe_output), stderr=""
-        )
+    with patch("media_audit.infrastructure.probe.ffprobe.FFProbe.probe") as mock_probe:
+        mock_probe.return_value = mock_ffprobe_output
 
-        video_info = ffprobe_instance.get_video_info(Path("/test/video.mkv"))
+        video_info = await ffprobe_instance.get_video_info(Path("/test/video.mkv"))
 
         assert video_info is not None
         assert video_info.codec == CodecType.HEVC
@@ -90,25 +89,28 @@ def test_probe_success(ffprobe_instance, mock_ffprobe_output):
         assert video_info.size == 7200000000
 
 
-def test_probe_file_not_found(ffprobe_instance):
+@pytest.mark.asyncio
+async def test_probe_file_not_found(ffprobe_instance):
     """Test probing non-existent file."""
     with patch("subprocess.run") as mock_run:
         mock_run.side_effect = FileNotFoundError
 
-        raw_data = ffprobe_instance.probe(Path("/nonexistent/video.mkv"))
+        raw_data = await ffprobe_instance.probe(Path("/nonexistent/video.mkv"))
         assert raw_data == {}
 
 
-def test_probe_invalid_json(ffprobe_instance):
+@pytest.mark.asyncio
+async def test_probe_invalid_json(ffprobe_instance):
     """Test handling invalid JSON from ffprobe."""
     with patch("subprocess.run") as mock_run:
         mock_run.return_value = MagicMock(returncode=0, stdout="invalid json", stderr="")
 
-        raw_data = ffprobe_instance.probe(Path("/test/video.mkv"))
+        raw_data = await ffprobe_instance.probe(Path("/test/video.mkv"))
         assert raw_data == {}
 
 
-def test_probe_no_video_stream(ffprobe_instance):
+@pytest.mark.asyncio
+async def test_probe_no_video_stream(ffprobe_instance):
     """Test probing file with no video stream."""
     output = {
         "streams": [
@@ -125,13 +127,14 @@ def test_probe_no_video_stream(ffprobe_instance):
     with patch("subprocess.run") as mock_run:
         mock_run.return_value = MagicMock(returncode=0, stdout=json.dumps(output), stderr="")
 
-        video_info = ffprobe_instance.get_video_info(Path("/test/audio.mp3"))
+        video_info = await ffprobe_instance.get_video_info(Path("/test/audio.mp3"))
         assert video_info is not None
         assert video_info.codec is None
         assert video_info.resolution is None
 
 
-def test_probe_missing_fields(ffprobe_instance):
+@pytest.mark.asyncio
+async def test_probe_missing_fields(ffprobe_instance):
     """Test probing with missing fields in output."""
     output = {
         "streams": [
@@ -144,10 +147,10 @@ def test_probe_missing_fields(ffprobe_instance):
         "format": {},  # Missing all fields
     }
 
-    with patch("subprocess.run") as mock_run:
-        mock_run.return_value = MagicMock(returncode=0, stdout=json.dumps(output), stderr="")
+    with patch("media_audit.infrastructure.probe.ffprobe.FFProbe.probe") as mock_probe:
+        mock_probe.return_value = output
 
-        video_info = ffprobe_instance.get_video_info(Path("/test/video.mp4"))
+        video_info = await ffprobe_instance.get_video_info(Path("/test/video.mp4"))
         assert video_info is not None
         assert video_info.codec == CodecType.H264
         assert video_info.resolution is None
@@ -155,37 +158,55 @@ def test_probe_missing_fields(ffprobe_instance):
         assert video_info.bitrate == 0
 
 
-def test_probe_video_function():
+@pytest.mark.asyncio
+async def test_probe_video_function():
     """Test the probe_video convenience function."""
     with patch("media_audit.infrastructure.probe.ffprobe.shutil.which") as mock_which:
         mock_which.return_value = "/usr/bin/ffprobe"
         with patch(
             "media_audit.infrastructure.probe.ffprobe.FFProbe.get_video_info"
         ) as mock_get_video_info:
-            mock_get_video_info.return_value = VideoInfo(
-                path=Path("/test/video.mkv"),
-                codec=CodecType.HEVC,
-                resolution=(1920, 1080),
-            )
+            # Make the mock async
+            async def async_get_video_info(path):
+                return VideoInfo(
+                    path=Path("/test/video.mkv"),
+                    codec=CodecType.HEVC,
+                    resolution=(1920, 1080),
+                )
 
-            result = probe_video(Path("/test/video.mkv"))
+            mock_get_video_info.side_effect = async_get_video_info
+
+            result = await probe_video(Path("/test/video.mkv"))
             assert result is not None
             assert result.codec == CodecType.HEVC
             mock_get_video_info.assert_called_once_with(Path("/test/video.mkv"))
 
 
-def test_probe_command_construction(ffprobe_instance):
+@pytest.mark.asyncio
+async def test_probe_command_construction(ffprobe_instance):
     """Test that ffprobe command is constructed correctly."""
-    with patch("subprocess.run") as mock_run:
-        mock_run.return_value = MagicMock(
-            returncode=0, stdout=json.dumps({"streams": [], "format": {}}), stderr=""
-        )
+    with patch("asyncio.create_subprocess_exec") as mock_create:
+        # Create a mock process
+        mock_process = MagicMock()
 
-        ffprobe_instance.probe(Path("/test/video.mkv"))
+        # Make communicate async
+        async def communicate():
+            return (json.dumps({"streams": [], "format": {}}).encode(), b"")
+
+        mock_process.communicate = communicate
+        mock_process.returncode = 0
+
+        # Make create_subprocess_exec return the mock process
+        async def async_create(*args, **kwargs):
+            return mock_process
+
+        mock_create.side_effect = async_create
+
+        await ffprobe_instance.probe(Path("/test/video.mkv"))
 
         # Check the command was constructed correctly
-        call_args = mock_run.call_args[0][0]
-        assert "ffprobe" in call_args[0]
+        call_args = mock_create.call_args[0]
+        assert ffprobe_instance.ffprobe_path in call_args[0]
         assert "-v" in call_args
         assert "quiet" in call_args
         assert "-print_format" in call_args

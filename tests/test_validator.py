@@ -33,7 +33,8 @@ def validator(scan_config):
     return MediaValidator(scan_config)
 
 
-def test_validate_movie_missing_assets(validator):
+@pytest.mark.asyncio
+async def test_validate_movie_missing_assets(validator):
     """Test validation of movie with missing assets."""
     movie = MovieItem(
         path=Path("/media/Movies/Test Movie"),
@@ -41,7 +42,7 @@ def test_validate_movie_missing_assets(validator):
         type=MediaType.MOVIE,
     )
 
-    validator.validate_movie(movie)
+    await validator.validate_movie(movie)
 
     # Should have issues for missing assets
     assert len(movie.issues) >= 2
@@ -49,7 +50,8 @@ def test_validate_movie_missing_assets(validator):
     assert any(issue.message == "Missing background/fanart image" for issue in movie.issues)
 
 
-def test_validate_movie_with_assets(validator):
+@pytest.mark.asyncio
+async def test_validate_movie_with_assets(validator):
     """Test validation of movie with all required assets."""
     movie = MovieItem(
         path=Path("/media/Movies/Test Movie"),
@@ -65,14 +67,15 @@ def test_validate_movie_with_assets(validator):
         bitrate=10000000,
     )
 
-    validator.validate_movie(movie)
+    await validator.validate_movie(movie)
 
     # Should have no critical issues
     errors = [issue for issue in movie.issues if issue.severity == ValidationStatus.ERROR]
     assert len(errors) == 0
 
 
-def test_validate_movie_invalid_codec(validator):
+@pytest.mark.asyncio
+async def test_validate_movie_invalid_codec(validator):
     """Test validation of movie with unsupported codec."""
     movie = MovieItem(
         path=Path("/media/Movies/Test Movie"),
@@ -88,14 +91,15 @@ def test_validate_movie_invalid_codec(validator):
         bitrate=10000000,
     )
 
-    validator.validate_movie(movie)
+    await validator.validate_movie(movie)
 
     # Should have codec issue
     codec_issues = [issue for issue in movie.issues if "codec" in issue.message.lower()]
     assert len(codec_issues) > 0
 
 
-def test_validate_episode_naming(validator):
+@pytest.mark.asyncio
+async def test_validate_episode_naming(validator):
     """Test validation of episode naming."""
     episode = EpisodeItem(
         path=Path("/media/TV/Test Series/Season 01"),
@@ -105,14 +109,15 @@ def test_validate_episode_naming(validator):
         episode_number=1,
     )
 
-    validator.validate_episode(episode)
+    await validator.validate_episode(episode)
 
     # Basic episode should validate without critical errors
     errors = [issue for issue in episode.issues if issue.severity == ValidationStatus.ERROR]
     assert len(errors) <= 1  # May have video file missing error
 
 
-def test_validate_series_structure(validator):
+@pytest.mark.asyncio
+async def test_validate_series_structure(validator):
     """Test validation of series structure."""
     series = SeriesItem(
         path=Path("/media/TV/Test Series"),
@@ -139,13 +144,14 @@ def test_validate_series_structure(validator):
     season.episodes.append(episode)
     series.seasons.append(season)
 
-    validator.validate_series(series)
+    await validator.validate_series(series)
 
     # Should have issue for missing series poster
     assert any(issue.message == "Missing series poster" for issue in series.issues)
 
 
-def test_validate_resolution(validator):
+@pytest.mark.asyncio
+async def test_validate_resolution(validator):
     """Test that resolution validation is not implemented."""
     movie = MovieItem(
         path=Path("/media/Movies/Test Movie"),
@@ -163,14 +169,15 @@ def test_validate_resolution(validator):
         bitrate=10000000,
     )
 
-    validator.validate_movie(movie)
+    await validator.validate_movie(movie)
 
     # Should not have resolution issue (resolution validation not implemented)
     resolution_issues = [issue for issue in movie.issues if "resolution" in issue.message.lower()]
     assert len(resolution_issues) == 0
 
 
-def test_validate_bitrate(validator):
+@pytest.mark.asyncio
+async def test_validate_bitrate(validator):
     """Test that bitrate validation is not implemented."""
     movie = MovieItem(
         path=Path("/media/Movies/Test Movie"),
@@ -188,15 +195,18 @@ def test_validate_bitrate(validator):
         bitrate=1000000,  # Low bitrate
     )
 
-    validator.validate_movie(movie)
+    await validator.validate_movie(movie)
 
     # Should not have bitrate issue (bitrate validation not implemented)
     bitrate_issues = [issue for issue in movie.issues if "bitrate" in issue.message.lower()]
     assert len(bitrate_issues) == 0
 
 
-def test_validate_general_item(validator):
+@pytest.mark.asyncio
+async def test_validate_general_item(validator):
     """Test validate dispatches to correct validator."""
+    import asyncio
+
     # Test movie dispatch
     movie = MovieItem(
         path=Path("/media/Movies/Test"),
@@ -204,7 +214,10 @@ def test_validate_general_item(validator):
         type=MediaType.MOVIE,
     )
     with patch.object(validator, "validate_movie") as mock_validate:
-        validator.validate(movie)
+        future = asyncio.Future()
+        future.set_result(None)
+        mock_validate.return_value = future
+        await validator.validate(movie)
         mock_validate.assert_called_once_with(movie)
 
     # Test series dispatch
@@ -214,7 +227,10 @@ def test_validate_general_item(validator):
         type=MediaType.TV_SERIES,
     )
     with patch.object(validator, "validate_series") as mock_validate:
-        validator.validate(series)
+        future = asyncio.Future()
+        future.set_result(None)
+        mock_validate.return_value = future
+        await validator.validate(series)
         mock_validate.assert_called_once_with(series)
 
     # Test season dispatch
@@ -222,9 +238,13 @@ def test_validate_general_item(validator):
         path=Path("/media/TV/Test/Season 01"),
         name="Season 01",
         type=MediaType.TV_SEASON,
+        season_number=1,
     )
     with patch.object(validator, "validate_season") as mock_validate:
-        validator.validate(season)
+        future = asyncio.Future()
+        future.set_result(None)
+        mock_validate.return_value = future
+        await validator.validate(season)
         mock_validate.assert_called_once_with(season)
 
     # Test episode dispatch
@@ -232,7 +252,12 @@ def test_validate_general_item(validator):
         path=Path("/media/TV/Test/Season 01"),
         name="S01E01",
         type=MediaType.TV_EPISODE,
+        season_number=1,
+        episode_number=1,
     )
     with patch.object(validator, "validate_episode") as mock_validate:
-        validator.validate(episode)
+        future = asyncio.Future()
+        future.set_result(None)
+        mock_validate.return_value = future
+        await validator.validate(episode)
         mock_validate.assert_called_once_with(episode)
