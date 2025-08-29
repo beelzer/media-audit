@@ -81,7 +81,7 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           uv-version: ${{ env.UV_VERSION }}
-          extras: "dev"  # Only need ruff, mypy for quality checks
+          extras: "lint,typing"  # Only ruff and mypy
 
       - name: ${{ matrix.check.emoji }} Run ${{ matrix.check.name }}
         id: check
@@ -143,7 +143,7 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           uv-version: ${{ env.UV_VERSION }}
-          extras: "dev"  # Need bandit, detect-secrets, pip-audit
+          extras: "security"  # Only security tools
 
       - name: 🔒 Run ${{ matrix.scan.name }}
         run: ${{ matrix.scan.command }}
@@ -212,7 +212,7 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
           uv-version: ${{ env.UV_VERSION }}
-          extras: "dev"  # Need pytest and all test dependencies
+          extras: "test"  # Only pytest and test tools
 
       - name: 🎥 Setup FFmpeg
         uses: ./.github/actions/setup-ffmpeg
@@ -312,7 +312,7 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           uv-version: ${{ env.UV_VERSION }}
-          extras: "dev"  # Need pre-commit and linting tools
+          extras: "pre-commit,lint,typing,security"  # Pre-commit needs all linters
 
       - name: 💾 Cache pre-commit environments
         uses: actions/cache@v4

@@ -33,6 +33,48 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+# Testing dependencies
+test = [
+    "pytest>=8.4.1",
+    "pytest-cov>=6.2.1",
+    "pytest-asyncio>=1.1.0",
+]
+
+# Linting and formatting
+lint = [
+    "ruff>=0.12.10",
+]
+
+# Type checking
+typing = [
+    "mypy>=1.17.1",
+    "types-pyyaml>=6.0.12.20250822",
+    "types-aiofiles>=24.1.0",
+]
+
+# Security scanning
+security = [
+    "bandit>=1.8.6",
+    "detect-secrets>=1.5.0",
+    "pip-audit>=2.7.0",
+]
+
+# Pre-commit hooks
+pre-commit = [
+    "pre-commit>=4.3.0",
+]
+
+# Documentation
+docs = [
+    "mkdocs>=1.6.1",
+    "mkdocs-material>=9.6.0",
+    "mkdocstrings[python]>=0.28.0",
+    "mkdocs-mermaid2-plugin>=1.2.0",
+    "pymdown-extensions>=10.13.0",
+    "mkdocs-awesome-pages-plugin>=2.10.0",
+]
+
+# Development - includes everything
 dev = [
     "pytest>=8.4.1",
     "pytest-cov>=6.2.1",
@@ -45,14 +87,6 @@ dev = [
     "bandit>=1.8.6",
     "detect-secrets>=1.5.0",
     "pip-audit>=2.7.0",
-]
-docs = [
-    "mkdocs>=1.6.1",
-    "mkdocs-material>=9.6.0",
-    "mkdocstrings[python]>=0.28.0",
-    "mkdocs-mermaid2-plugin>=1.2.0",
-    "pymdown-extensions>=10.13.0",
-    "mkdocs-awesome-pages-plugin>=2.10.0",
 ]
 
 [project.scripts]

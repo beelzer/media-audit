@@ -14,7 +14,7 @@ inputs:
     default: ""
     required: false
   extras:
-    description: "Extras to install (e.g., 'dev', 'docs', or 'all' for --all-extras)"
+    description: "Extras to install (e.g., 'lint', 'test', 'lint,typing' for multiple, or 'all' for --all-extras)"
     default: "all"
     required: false
   frozen:
@@ -56,7 +56,17 @@ runs:
         if [ "${{ inputs.extras }}" = "all" ]; then
           uv sync $FROZEN_FLAG --all-extras
         elif [ -n "${{ inputs.extras }}" ]; then
-          uv sync $FROZEN_FLAG --extra ${{ inputs.extras }}
+          # Handle multiple extras separated by commas
+          EXTRAS_FLAGS=""
+          IFS=',' read -ra EXTRAS_ARRAY <<< "${{ inputs.extras }}"
+          for extra in "${EXTRAS_ARRAY[@]}"; do
+            # Trim whitespace
+            extra=$(echo "$extra" | xargs)
+            if [ -n "$extra" ]; then
+              EXTRAS_FLAGS="$EXTRAS_FLAGS --extra $extra"
+            fi
+          done
+          uv sync $FROZEN_FLAG $EXTRAS_FLAGS
         else
           uv sync $FROZEN_FLAG
         fi

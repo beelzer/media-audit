@@ -476,13 +476,36 @@ docs = [
     { name = "mkdocstrings", extra = ["python"] },
     { name = "pymdown-extensions" },
 ]
+lint = [
+    { name = "ruff" },
+]
+pre-commit = [
+    { name = "pre-commit" },
+]
+security = [
+    { name = "bandit" },
+    { name = "detect-secrets" },
+    { name = "pip-audit" },
+]
+test = [
+    { name = "pytest" },
+    { name = "pytest-asyncio" },
+    { name = "pytest-cov" },
+]
+typing = [
+    { name = "mypy" },
+    { name = "types-aiofiles" },
+    { name = "types-pyyaml" },
+]
 
 [package.metadata]
 requires-dist = [
     { name = "aiofiles", specifier = ">=24.1.0" },
     { name = "bandit", marker = "extra == 'dev'", specifier = ">=1.8.6" },
+    { name = "bandit", marker = "extra == 'security'", specifier = ">=1.8.6" },
     { name = "click", specifier = ">=8.2.1" },
     { name = "detect-secrets", marker = "extra == 'dev'", specifier = ">=1.5.0" },
+    { name = "detect-secrets", marker = "extra == 'security'", specifier = ">=1.5.0" },
     { name = "jinja2", specifier = ">=3.1.6" },
     { name = "mkdocs", marker = "extra == 'docs'", specifier = ">=1.6.1" },
     { name = "mkdocs-awesome-pages-plugin", marker = "extra == 'docs'", specifier = ">=2.10.0" },
@@ -490,21 +513,30 @@ requires-dist = [
     { name = "mkdocs-mermaid2-plugin", marker = "extra == 'docs'", specifier = ">=1.2.0" },
     { name = "mkdocstrings", extras = ["python"], marker = "extra == 'docs'", specifier = ">=0.28.0" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.17.1" },
+    { name = "mypy", marker = "extra == 'typing'", specifier = ">=1.17.1" },
     { name = "pip-audit", marker = "extra == 'dev'", specifier = ">=2.7.0" },
+    { name = "pip-audit", marker = "extra == 'security'", specifier = ">=2.7.0" },
     { name = "pre-commit", marker = "extra == 'dev'", specifier = ">=4.3.0" },
+    { name = "pre-commit", marker = "extra == 'pre-commit'", specifier = ">=4.3.0" },
     { name = "pydantic", specifier = ">=2.11.7" },
     { name = "pymdown-extensions", marker = "extra == 'docs'", specifier = ">=10.13.0" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.4.1" },
+    { name = "pytest", marker = "extra == 'test'", specifier = ">=8.4.1" },
     { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=1.1.0" },
+    { name = "pytest-asyncio", marker = "extra == 'test'", specifier = ">=1.1.0" },
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=6.2.1" },
+    { name = "pytest-cov", marker = "extra == 'test'", specifier = ">=6.2.1" },
     { name = "pyyaml", specifier = ">=6.0.2" },
     { name = "rich", specifier = ">=14.1.0" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.12.10" },
+    { name = "ruff", marker = "extra == 'lint'", specifier = ">=0.12.10" },
     { name = "types-aiofiles", marker = "extra == 'dev'", specifier = ">=24.1.0" },
+    { name = "types-aiofiles", marker = "extra == 'typing'", specifier = ">=24.1.0" },
     { name = "types-pyyaml", marker = "extra == 'dev'", specifier = ">=6.0.12.20250822" },
+    { name = "types-pyyaml", marker = "extra == 'typing'", specifier = ">=6.0.12.20250822" },
     { name = "typing-extensions", specifier = ">=4.15.0" },
 ]
-provides-extras = ["dev", "docs"]
+provides-extras = ["test", "lint", "typing", "security", "pre-commit", "docs", "dev"]
 
 [[package]]
 name = "mergedeep"
