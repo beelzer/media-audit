@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import sys
 import webbrowser
 from pathlib import Path
@@ -18,6 +17,7 @@ from media_audit.infrastructure import Config, ReportConfig, ScanConfig
 from media_audit.presentation.reports import HTMLReportGenerator, JSONReportGenerator
 from media_audit.shared import setup_logger
 from media_audit.shared.error_handler import create_error_reporter
+from media_audit.shared.platform_utils import get_cache_dir, run_async
 
 console = Console()
 
@@ -228,45 +228,8 @@ def scan(
     try:
         scanner = MediaScanner(cfg.scan)
 
-        # Configure asyncio for Windows to suppress transport errors
-        if sys.platform == "win32":
-            # Set the event loop policy to suppress ProactorBasePipeTransport warnings
-            asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
-
-            # Configure exception handler to suppress transport errors
-            def exception_handler(loop: asyncio.AbstractEventLoop, context: dict[str, Any]) -> None:
-                exception = context.get("exception")
-                if exception and "I/O operation on closed pipe" in str(exception):
-                    return  # Suppress these specific errors
-
-                # Suppress "Task was destroyed but it is pending" messages
-                message = context.get("message", "")
-                if message and any(
-                    msg in message
-                    for msg in [
-                        "unclosed transport",
-                        "Task was destroyed but it is pending",
-                        "Task exception was never retrieved",
-                    ]
-                ):
-                    return  # Suppress these cleanup messages
-
-                # Log other exceptions if needed
-                if message:
-                    import logging
-
-                    logging.getLogger("asyncio").error(f"Unhandled exception: {context}")
-
-            loop = asyncio.new_event_loop()
-            loop.set_exception_handler(exception_handler)
-            asyncio.set_event_loop(loop)
-
-            # Run async scan with custom loop
-            result = loop.run_until_complete(scanner.scan())
-            loop.close()
-        else:
-            # Run async scan normally on non-Windows platforms
-            result = asyncio.run(scanner.scan())
+        # Run async scan with platform-specific configuration
+        result = run_async(scanner.scan(), suppress_warnings=True)
     except Exception as e:
         error_reporter.report_error(e, "Scan failed")
         sys.exit(1)
@@ -352,23 +315,10 @@ def init_config(output: Path, full: bool = False) -> None:
 )
 def clear_cache(cache_dir: Path | None, force: bool) -> None:
     """Clear the media-audit cache directory."""
-    import os
     import shutil
-    from pathlib import Path
 
     # Determine cache directory
-    if cache_dir:
-        cache_path = cache_dir
-    else:
-        # Default cache directory - check multiple locations
-        cache_path = Path.home() / ".cache" / "media-audit"
-
-        # On Windows, also check the Windows-specific location if Unix location doesn't exist
-        if sys.platform == "win32" and not cache_path.exists():
-            cache_base = Path(os.environ.get("LOCALAPPDATA", Path.home() / "AppData" / "Local"))
-            windows_cache = cache_base / "media-audit" / "cache"
-            if windows_cache.exists():
-                cache_path = windows_cache
+    cache_path = cache_dir or get_cache_dir()
 
     # Check if cache directory exists
     if not cache_path.exists():

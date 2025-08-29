@@ -11,6 +11,7 @@ import yaml
 from media_audit.core import CodecType
 from media_audit.domain.patterns import MediaPatterns, get_patterns
 from media_audit.shared.logging import get_logger
+from media_audit.shared.platform_utils import get_cache_dir
 
 
 @dataclass
@@ -39,7 +40,7 @@ class ScanConfig:
 
         # Set default cache dir
         if self.cache_enabled and self.cache_dir is None:
-            self.cache_dir = Path.home() / ".cache" / "media-audit"
+            self.cache_dir = get_cache_dir()
 
 
 @dataclass

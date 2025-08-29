@@ -40,6 +40,7 @@ from typing import Any
 import aiofiles
 
 from media_audit.shared.logging import get_logger
+from media_audit.shared.platform_utils import get_cache_dir
 
 type T = Any
 
@@ -146,7 +147,7 @@ class MediaCache:
         if not enabled:
             return
 
-        self.cache_dir = cache_dir or (Path.home() / ".cache" / "media-audit")
+        self.cache_dir = cache_dir or get_cache_dir()
         self.cache_dir.mkdir(parents=True, exist_ok=True)
 
         # Generate current schema version
