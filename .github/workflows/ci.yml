@@ -92,12 +92,13 @@ jobs:
       - name: 📤 Upload virtual environment as artifact
         uses: actions/upload-artifact@v4
         with:
-          name: venv-${{ runner.os }}-py${{ env.PYTHON_VERSION }}
+          name: venv-deps
           path: |
             .venv
             ~/.cache/uv
           retention-days: 1
           compression-level: 1  # Faster compression for ephemeral artifacts
+          if-no-files-found: error
 
   # ============================================================================
   # 🎯 Quality Gates - Using Matrix Strategy for Parallel Execution
@@ -142,7 +143,13 @@ jobs:
       - name: 📥 Download virtual environment
         uses: actions/download-artifact@v5
         with:
-          name: venv-${{ runner.os }}-py${{ env.PYTHON_VERSION }}
+          name: venv-deps
+        continue-on-error: true
+        id: download-venv
+
+      - name: 🔧 Install dependencies if artifact missing
+        if: steps.download-venv.outcome != 'success'
+        run: uv sync --frozen --all-extras
 
       - name: ${{ matrix.check.emoji }} Run ${{ matrix.check.name }}
         id: check
@@ -214,7 +221,13 @@ jobs:
       - name: 📥 Download virtual environment
         uses: actions/download-artifact@v5
         with:
-          name: venv-${{ runner.os }}-py${{ env.PYTHON_VERSION }}
+          name: venv-deps
+        continue-on-error: true
+        id: download-venv
+
+      - name: 🔧 Install dependencies if artifact missing
+        if: steps.download-venv.outcome != 'success'
+        run: uv sync --frozen --all-extras
 
       - name: 🔒 Run ${{ matrix.scan.name }}
         run: ${{ matrix.scan.command }}
@@ -368,7 +381,13 @@ jobs:
       - name: 📥 Download virtual environment
         uses: actions/download-artifact@v5
         with:
-          name: venv-${{ runner.os }}-py${{ env.PYTHON_VERSION }}
+          name: venv-deps
+        continue-on-error: true
+        id: download-venv
+
+      - name: 🔧 Install dependencies if artifact missing
+        if: steps.download-venv.outcome != 'success'
+        run: uv sync --frozen --all-extras
 
       - name: 🏗️ Build package
         run: |
@@ -414,7 +433,13 @@ jobs:
       - name: 📥 Download virtual environment
         uses: actions/download-artifact@v5
         with:
-          name: venv-${{ runner.os }}-py${{ env.PYTHON_VERSION }}
+          name: venv-deps
+        continue-on-error: true
+        id: download-venv
+
+      - name: 🔧 Install dependencies if artifact missing
+        if: steps.download-venv.outcome != 'success'
+        run: uv sync --frozen --all-extras
 
       - name: 💾 Cache pre-commit environments
         uses: actions/cache@v4
