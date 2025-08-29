@@ -7,7 +7,7 @@ default_language_version:
 repos:
   # General file checks
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.6.0
+    rev: v6.0.0
     hooks:
       - id: trailing-whitespace
       - id: end-of-file-fixer
@@ -27,7 +27,7 @@ repos:
 
   # Python specific
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.6.9
+    rev: v0.12.11
     hooks:
       - id: ruff
         args: [--fix, --exit-non-zero-on-fix]
@@ -35,7 +35,7 @@ repos:
 
   # Type checking
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.11.2
+    rev: v1.17.1
     hooks:
       - id: mypy
         files: ^src/
@@ -48,7 +48,7 @@ repos:
 
   # Security checks
   - repo: https://github.com/PyCQA/bandit
-    rev: 1.7.9
+    rev: 1.8.6
     hooks:
       - id: bandit
         args: ["-ll"]
@@ -56,7 +56,7 @@ repos:
 
   # YAML formatting
   - repo: https://github.com/pre-commit/mirrors-prettier
-    rev: v3.1.0
+    rev: v4.0.0-alpha.8
     hooks:
       - id: prettier
         types_or: [yaml, json]
@@ -64,7 +64,7 @@ repos:
 
   # Python upgrade syntax
   - repo: https://github.com/asottile/pyupgrade
-    rev: v3.17.0
+    rev: v3.20.0
     hooks:
       - id: pyupgrade
         args: [--py312-plus]
@@ -78,13 +78,13 @@ repos:
 
   # GitHub Actions workflow linting
   - repo: https://github.com/rhysd/actionlint
-    rev: v1.7.1
+    rev: v1.7.7
     hooks:
       - id: actionlint
 
   # Documentation checks
   - repo: https://github.com/igorshubovych/markdownlint-cli
-    rev: v0.39.0
+    rev: v0.45.0
     hooks:
       - id: markdownlint
         args: ["--config", ".markdownlint.yml"]
@@ -92,7 +92,7 @@ repos:
         exclude: ^\.github/
 
   - repo: https://github.com/streetsidesoftware/cspell-cli
-    rev: v8.3.0
+    rev: v9.2.0
     hooks:
       - id: cspell
         args: ["--config", ".cspell.json"]
@@ -100,7 +100,7 @@ repos:
         exclude: ^(\.github/|uv\.lock|\.secrets\.baseline)
 
   - repo: https://github.com/tcort/markdown-link-check
-    rev: v3.12.1
+    rev: v3.13.7
     hooks:
       - id: markdown-link-check
         args: ["--config", ".markdown-link-check.json"]
