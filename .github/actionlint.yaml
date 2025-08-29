@@ -1,0 +1,9 @@
+# actionlint configuration
+# Suppress warnings for beta ARM runners from partner-runner-images
+
+self-hosted-runner:
+  # Additional labels for partner/beta runners
+  labels:
+    - ubuntu-22.04-arm
+    - ubuntu-24.04-arm
+    - windows-11-arm
