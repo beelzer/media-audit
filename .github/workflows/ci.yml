@@ -318,11 +318,15 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/pre-commit
-          key: pre-commit-${{ runner.os }}-py${{ env.PYTHON_VERSION }}-${{ hashFiles('.pre-commit-config.yaml') }}
+          key: pre-commit-${{ runner.os }}-py${{ env.PYTHON_VERSION }}-${{ hashFiles('.pre-commit-config.yaml', 'pyproject.toml') }}
+          restore-keys: |
+            pre-commit-${{ runner.os }}-py${{ env.PYTHON_VERSION }}-
+            pre-commit-${{ runner.os }}-
 
       - name: 🪝 Run pre-commit hooks
         env:
           SKIP: prettier,markdownlint,cspell,markdown-link-check,mkdocs-build,pytest
+          PRE_COMMIT_HOME: ~/.cache/pre-commit
         run: |
           uv run pre-commit run --all-files --show-diff-on-failure --color=always
 
