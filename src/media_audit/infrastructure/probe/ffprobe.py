@@ -56,12 +56,17 @@ class FFProbe:
         proc = None
         try:
             # Create subprocess with proper cleanup
+            # On Windows, prevent console window popup
+            creation_flags = 0
+            if sys.platform == "win32":
+                # CREATE_NO_WINDOW is only available on Windows
+                creation_flags = getattr(subprocess, "CREATE_NO_WINDOW", 0x08000000)
+
             proc = await asyncio.create_subprocess_exec(
                 *cmd,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
-                # On Windows, prevent console window popup
-                creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0,
+                creationflags=creation_flags,
             )
 
             # Set a timeout for the probe operation
