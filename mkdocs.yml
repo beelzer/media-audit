@@ -107,6 +107,7 @@ nav:
       - Installation: getting-started/installation.md
       - Quick Start: getting-started/quick-start.md
       - Configuration: getting-started/configuration.md
+      - ARM Setup: getting-started/arm-setup.md
   - User Guide:
       - Basic Usage: user-guide/usage.md
       - Patterns & Matching: user-guide/patterns.md

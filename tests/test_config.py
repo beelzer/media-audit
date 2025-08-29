@@ -15,7 +15,9 @@ def test_scan_config_defaults():
     assert config.profiles == ["all"]
     assert CodecType.HEVC in config.allowed_codecs
     assert CodecType.AV1 in config.allowed_codecs
-    assert config.concurrent_workers == 4
+    # Worker count is now auto-detected based on platform
+    assert config.concurrent_workers > 0
+    assert config.concurrent_workers <= 8  # Max is 8
     assert config.cache_enabled is True
 
 

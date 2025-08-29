@@ -55,7 +55,33 @@ A powerful CLI tool for auditing and validating media libraries. Scans your medi
 - Concurrent scanning support
 - Smart caching for faster scans
 
+## 🖥️ Platform Support
+
+Media-audit runs on all major platforms:
+
+- **Windows**: Windows 10/11 (x64)
+- **macOS**: Intel and Apple Silicon (M1/M2/M3)
+- **Linux**: x86_64 and ARM64 (including Raspberry Pi)
+
+### ARM Architecture Support
+
+Full native support for ARM-based systems:
+
+- Apple Silicon Macs (M1/M2/M3)
+- Raspberry Pi 4/5
+- AWS Graviton instances
+- Other ARM64/ARMv7 Linux devices
+
+See [ARM Setup Guide](docs/getting-started/arm-setup.md) for platform-specific instructions.
+
 ## 📦 Installation
+
+### System Requirements
+
+- Python 3.13 or higher
+- FFmpeg/FFprobe (for media analysis)
+- 2GB+ RAM recommended
+- 100MB disk space for application
 
 ### Using uv (Recommended)
 

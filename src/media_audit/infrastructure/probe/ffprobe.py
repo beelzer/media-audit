@@ -7,7 +7,6 @@ import json
 import logging
 import shutil
 import subprocess
-import sys
 from contextlib import suppress
 from functools import cache
 from pathlib import Path
@@ -15,6 +14,7 @@ from typing import Any
 
 from media_audit.core import CodecType, VideoInfo
 from media_audit.infrastructure.cache import MediaCache
+from media_audit.shared.platform_utils import is_arm, is_windows
 
 
 class FFProbe:
@@ -56,22 +56,26 @@ class FFProbe:
         proc = None
         try:
             # Create subprocess with proper cleanup
-            # On Windows, prevent console window popup
+            # Platform-specific subprocess configuration
             creation_flags = 0
-            if sys.platform == "win32":
-                # CREATE_NO_WINDOW is only available on Windows
-                creation_flags = getattr(subprocess, "CREATE_NO_WINDOW", 0x08000000)
+            kwargs: dict[str, Any] = {
+                "stdout": asyncio.subprocess.PIPE,
+                "stderr": asyncio.subprocess.PIPE,
+            }
 
-            proc = await asyncio.create_subprocess_exec(
-                *cmd,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-                creationflags=creation_flags,
-            )
+            if is_windows():
+                # On Windows, prevent console window popup
+                creation_flags = getattr(subprocess, "CREATE_NO_WINDOW", 0x08000000)
+                kwargs["creationflags"] = creation_flags
+
+            # ARM platforms may need longer timeouts for large files
+            timeout = 60.0 if is_arm() else 30.0
+
+            proc = await asyncio.create_subprocess_exec(*cmd, **kwargs)
 
             # Set a timeout for the probe operation
             try:
-                stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=30.0)
+                stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=timeout)
             except TimeoutError:
                 self.logger.warning(f"FFprobe timeout for {file_path}")
                 if proc:

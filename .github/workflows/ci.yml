@@ -279,32 +279,57 @@ jobs:
   # ============================================================================
 
   test-matrix:
-    name: 🧪${{ matrix.os-emoji }} ${{ matrix.os-name }} • Py${{ matrix.python }}
+    name: 🧪${{ matrix.os-emoji }} ${{ matrix.os-name }} • ${{ matrix.arch }} • Py${{ matrix.python }}
     needs: [quality-ruff-lint, quality-ruff-format, quality-mypy]
     strategy:
       fail-fast: false
       matrix:
         include:
+          # x86_64 platforms
           - os: ubuntu-latest
             os-name: Linux
             os-emoji: 🐧
+            arch: x64
             python: '3.13'
             coverage: true
           - os: windows-2022
             os-name: Windows
             os-emoji: 🪟
+            arch: x64
             python: '3.13'
             coverage: false
           - os: macos-13
-            os-name: macOS
+            os-name: macOS-Intel
             os-emoji: 🍎
+            arch: x64
             python: '3.13'
             coverage: false
+          # ARM platforms
+          - os: macos-14
+            os-name: macOS-ARM
+            os-emoji: 🍎
+            arch: arm64
+            python: '3.13'
+            coverage: false
+          # ARM Linux (using QEMU emulation for now, native runners when available)
+          - os: ubuntu-latest
+            os-name: Linux-ARM
+            os-emoji: 🐧
+            arch: arm64
+            python: '3.13'
+            coverage: false
+            use-qemu: true
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
     steps:
       - name: 📥 Checkout code
         uses: actions/checkout@v5
+
+      - name: 🔧 Setup QEMU for ARM emulation
+        if: matrix.use-qemu == true
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: linux/arm64
 
       - name: 🐍 Setup Python ${{ matrix.python }}
         uses: actions/setup-python@v5
@@ -323,7 +348,7 @@ jobs:
         id: setup-ffmpeg
         with:
           ffmpeg-version: release
-          architecture: ''  # Use default for platform
+          architecture: ${{ matrix.arch == 'arm64' && 'arm64' || '' }}
           github-token: ${{ github.token }}
 
       - name: 🔧 Install dependencies
@@ -357,7 +382,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-results-${{ matrix.os }}-py${{ matrix.python }}
+          name: test-results-${{ matrix.os }}-${{ matrix.arch }}-py${{ matrix.python }}
           path: |
             junit.xml
             htmlcov/

@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import os
+import platform
 import sys
 from collections.abc import Coroutine
 from pathlib import Path
@@ -104,6 +105,54 @@ def is_linux() -> bool:
     return sys.platform.startswith("linux")
 
 
+def get_architecture() -> str:
+    """Get the system architecture.
+
+    Returns:
+        str: Architecture string (e.g., 'x86_64', 'arm64', 'aarch64')
+    """
+    return platform.machine().lower()
+
+
+def is_arm() -> bool:
+    """Check if running on ARM architecture.
+
+    Returns:
+        bool: True if running on ARM (arm64, aarch64, armv7l, etc.)
+    """
+    arch = get_architecture()
+    return any(arm_id in arch for arm_id in ["arm", "aarch"])
+
+
+def is_x86() -> bool:
+    """Check if running on x86/x64 architecture.
+
+    Returns:
+        bool: True if running on x86 or x64
+    """
+    arch = get_architecture()
+    return any(x86_id in arch for x86_id in ["x86", "x64", "amd64", "i386", "i686"])
+
+
+def get_platform_info() -> dict[str, str]:
+    """Get comprehensive platform information.
+
+    Returns:
+        dict: Platform details including OS, architecture, Python version
+    """
+    return {
+        "system": platform.system(),
+        "platform": sys.platform,
+        "architecture": get_architecture(),
+        "processor": platform.processor() or "unknown",
+        "python_version": platform.python_version(),
+        "python_implementation": platform.python_implementation(),
+        "is_arm": str(is_arm()),
+        "is_x86": str(is_x86()),
+        "is_64bit": str(sys.maxsize > 2**32),
+    }
+
+
 def normalize_path(path: Path | str) -> Path:
     """Normalize a path for the current platform.
 
@@ -139,10 +188,40 @@ def setup_asyncio_policy() -> None:
 
     Configures the appropriate event loop policy for the current platform
     to avoid issues with subprocess handling and signal management.
+    ARM platforms may need specific tuning for optimal performance.
     """
     if sys.platform == "win32":
         # Windows: Use ProactorEventLoop for better subprocess support
         asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
+    elif is_arm() and is_linux():
+        # ARM Linux: May benefit from specific event loop tuning
+        # Currently using default, but can be optimized based on testing
+        pass
+
+
+def get_optimal_worker_count() -> int:
+    """Get optimal worker count for the current platform and architecture.
+
+    ARM platforms may benefit from different concurrency settings
+    compared to x86 platforms.
+
+    Returns:
+        int: Optimal number of concurrent workers
+    """
+    cpu_count = os.cpu_count() or 4
+
+    if is_arm():
+        # ARM processors often have better power efficiency
+        # but may benefit from slightly lower concurrency
+        if is_macos():
+            # Apple Silicon has excellent performance
+            return min(cpu_count, 8)
+        else:
+            # Other ARM platforms (Raspberry Pi, etc.)
+            return min(cpu_count, 4)
+    else:
+        # x86/x64 platforms
+        return min(cpu_count, 8)
 
 
 def run_async[T](coro: Coroutine[Any, Any, T], *, suppress_warnings: bool = True) -> T:

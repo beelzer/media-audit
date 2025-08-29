@@ -17,7 +17,7 @@ from media_audit.infrastructure import Config, ReportConfig, ScanConfig
 from media_audit.presentation.reports import HTMLReportGenerator, JSONReportGenerator
 from media_audit.shared import setup_logger
 from media_audit.shared.error_handler import create_error_reporter
-from media_audit.shared.platform_utils import get_cache_dir, run_async
+from media_audit.shared.platform_utils import get_cache_dir, get_platform_info, run_async
 
 console = Console()
 
@@ -110,8 +110,8 @@ def cli(ctx: click.Context) -> None:
     "--workers",
     "-w",
     type=int,
-    default=4,
-    help="Number of concurrent workers",
+    default=0,
+    help="Number of concurrent workers (0=auto-detect based on platform)",
 )
 @click.option(
     "--no-cache",
@@ -152,7 +152,12 @@ def scan(
         log_level = logging.INFO
 
     logger = setup_logger(level=log_level, log_file=log_file)
+
+    # Log platform information for debugging
+    platform_info = get_platform_info()
     logger.info("Starting media audit scan")
+    logger.info(f"Platform: {platform_info['system']} {platform_info['architecture']}")
+    logger.debug(f"Full platform info: {platform_info}")
 
     # Create error reporter
     error_reporter = create_error_reporter(verbose=verbose, debug=debug)
@@ -193,7 +198,7 @@ def scan(
     if exclude:
         cfg.scan.exclude_patterns = list(exclude)
 
-    if workers:
+    if workers >= 0:
         cfg.scan.concurrent_workers = workers
 
     if no_cache:

@@ -11,7 +11,7 @@ import yaml
 from media_audit.core import CodecType
 from media_audit.domain.patterns import MediaPatterns, get_patterns
 from media_audit.shared.logging import get_logger
-from media_audit.shared.platform_utils import get_cache_dir
+from media_audit.shared.platform_utils import get_cache_dir, get_optimal_worker_count
 
 
 @dataclass
@@ -26,7 +26,7 @@ class ScanConfig:
     include_patterns: list[str] = field(default_factory=list)
     exclude_patterns: list[str] = field(default_factory=list)
     patterns: MediaPatterns | None = None
-    concurrent_workers: int = 4
+    concurrent_workers: int = 0  # 0 means auto-detect based on platform
     cache_enabled: bool = True
     cache_dir: Path | None = None
 
@@ -41,6 +41,14 @@ class ScanConfig:
         # Set default cache dir
         if self.cache_enabled and self.cache_dir is None:
             self.cache_dir = get_cache_dir()
+
+        # Auto-detect optimal worker count if not specified
+        if self.concurrent_workers == 0:
+            self.concurrent_workers = get_optimal_worker_count()
+            logger = get_logger("config")
+            logger.debug(
+                f"Auto-detected {self.concurrent_workers} concurrent workers for this platform"
+            )
 
 
 @dataclass
