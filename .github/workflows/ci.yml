@@ -44,69 +44,16 @@ permissions:
 env:
   PYTHON_VERSION: '3.13'
   UV_VERSION: '0.4.18'
-  UV_CACHE_DIR: ~/.cache/uv
   PYTHONUNBUFFERED: '1'
   FORCE_COLOR: '1'
 
 jobs:
-  # ============================================================================
-  # 🚀 Setup Job - Prepare dependencies and share via artifacts
-  # ============================================================================
-
-  setup-environment:
-    name: 📦 Setup Environment
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    outputs:
-      cache-key: ${{ steps.cache-key.outputs.key }}
-    steps:
-      - name: 📥 Checkout code
-        uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
-
-      - name: 🔑 Generate cache key
-        id: cache-key
-        run: |
-          echo "key=deps-${{ runner.os }}-py${{ env.PYTHON_VERSION }}-${{ hashFiles('**/pyproject.toml', '**/uv.lock') }}" >> "$GITHUB_OUTPUT"
-
-      - name: 🐍 Setup Python ${{ env.PYTHON_VERSION }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-
-      - name: 📦 Install uv
-        uses: astral-sh/setup-uv@v6
-        with:
-          version: ${{ env.UV_VERSION }}
-          enable-cache: true
-          cache-dependency-glob: |
-            **/pyproject.toml
-            **/uv.lock
-
-      - name: 🔧 Install all dependencies
-        run: |
-          uv sync --frozen --all-extras
-          echo "Dependencies installed"
-
-      - name: 📤 Upload virtual environment as artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: venv-deps
-          path: |
-            .venv
-            ~/.cache/uv
-          retention-days: 1
-          compression-level: 1  # Faster compression for ephemeral artifacts
-          if-no-files-found: error
-
   # ============================================================================
   # 🎯 Quality Gates - Using Matrix Strategy for Parallel Execution
   # ============================================================================
 
   quality-checks:
     name: ${{ matrix.check.emoji }} ${{ matrix.check.name }}
-    needs: setup-environment
     runs-on: ubuntu-latest
     timeout-minutes: 10
     strategy:
@@ -138,17 +85,12 @@ jobs:
         uses: astral-sh/setup-uv@v6
         with:
           version: ${{ env.UV_VERSION }}
-          enable-cache: false  # We'll use artifacts instead
+          enable-cache: true
+          cache-dependency-glob: |
+            **/pyproject.toml
+            **/uv.lock
 
-      - name: 📥 Download virtual environment
-        uses: actions/download-artifact@v5
-        with:
-          name: venv-deps
-        continue-on-error: true
-        id: download-venv
-
-      - name: 🔧 Install dependencies if artifact missing
-        if: steps.download-venv.outcome != 'success'
+      - name: 🔧 Install dependencies
         run: uv sync --frozen --all-extras
 
       - name: ${{ matrix.check.emoji }} Run ${{ matrix.check.name }}
@@ -175,7 +117,6 @@ jobs:
 
   security-scan:
     name: 🛡️ ${{ matrix.scan.name }}
-    needs: setup-environment
     runs-on: ubuntu-latest
     timeout-minutes: 10
     strategy:
@@ -205,7 +146,7 @@ jobs:
       - name: 📥 Checkout code
         uses: actions/checkout@v5
         with:
-          fetch-depth: 0  # Required for secret detection
+          fetch-depth: 0  # Required for secrets detection
 
       - name: 🐍 Setup Python ${{ env.PYTHON_VERSION }}
         uses: actions/setup-python@v5
@@ -216,17 +157,12 @@ jobs:
         uses: astral-sh/setup-uv@v6
         with:
           version: ${{ env.UV_VERSION }}
-          enable-cache: false
+          enable-cache: true
+          cache-dependency-glob: |
+            **/pyproject.toml
+            **/uv.lock
 
-      - name: 📥 Download virtual environment
-        uses: actions/download-artifact@v5
-        with:
-          name: venv-deps
-        continue-on-error: true
-        id: download-venv
-
-      - name: 🔧 Install dependencies if artifact missing
-        if: steps.download-venv.outcome != 'success'
+      - name: 🔧 Install dependencies
         run: uv sync --frozen --all-extras
 
       - name: 🔒 Run ${{ matrix.scan.name }}
@@ -244,12 +180,11 @@ jobs:
           retention-days: 7
 
   # ============================================================================
-  # 🧪 Testing Matrix - Runs in parallel with quality checks
+  # 🧪 Testing Matrix
   # ============================================================================
 
   test-matrix:
     name: 🧪${{ matrix.os-emoji }} ${{ matrix.os-name }} • ${{ matrix.arch }} • Py${{ matrix.python }}
-    needs: setup-environment  # Only needs setup, not quality checks
     strategy:
       fail-fast: false
       matrix:
@@ -355,12 +290,11 @@ jobs:
           verbose: true
 
   # ============================================================================
-  # 🏗️ Build Verification - Runs in parallel with quality checks
+  # 🏗️ Build Verification
   # ============================================================================
 
   build-package:
     name: 📦 Build Distribution
-    needs: setup-environment  # Only needs setup, runs in parallel with quality checks
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -376,17 +310,12 @@ jobs:
         uses: astral-sh/setup-uv@v6
         with:
           version: ${{ env.UV_VERSION }}
-          enable-cache: false
+          enable-cache: true
+          cache-dependency-glob: |
+            **/pyproject.toml
+            **/uv.lock
 
-      - name: 📥 Download virtual environment
-        uses: actions/download-artifact@v5
-        with:
-          name: venv-deps
-        continue-on-error: true
-        id: download-venv
-
-      - name: 🔧 Install dependencies if artifact missing
-        if: steps.download-venv.outcome != 'success'
+      - name: 🔧 Install dependencies
         run: uv sync --frozen --all-extras
 
       - name: 🏗️ Build package
@@ -412,7 +341,6 @@ jobs:
 
   pre-commit-check:
     name: 🪝 Pre-commit Hooks
-    needs: setup-environment
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -428,17 +356,12 @@ jobs:
         uses: astral-sh/setup-uv@v6
         with:
           version: ${{ env.UV_VERSION }}
-          enable-cache: false
+          enable-cache: true
+          cache-dependency-glob: |
+            **/pyproject.toml
+            **/uv.lock
 
-      - name: 📥 Download virtual environment
-        uses: actions/download-artifact@v5
-        with:
-          name: venv-deps
-        continue-on-error: true
-        id: download-venv
-
-      - name: 🔧 Install dependencies if artifact missing
-        if: steps.download-venv.outcome != 'success'
+      - name: 🔧 Install dependencies
         run: uv sync --frozen --all-extras
 
       - name: 💾 Cache pre-commit environments
