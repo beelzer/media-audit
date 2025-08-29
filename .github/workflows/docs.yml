@@ -89,7 +89,7 @@ jobs:
       - name: Get npm cache directory
         if: matrix.check.setup == 'npm'
         id: npm-cache-dir
-        run: echo "dir=$(npm config get cache)" >> ${GITHUB_OUTPUT}
+        run: echo "dir=$(npm config get cache)" >> "${GITHUB_OUTPUT}"
 
       - name: Cache npm dependencies
         if: matrix.check.setup == 'npm'
@@ -121,9 +121,9 @@ jobs:
         if: always()
         run: |
           if [ "${{ steps.check.outcome }}" == "success" ]; then
-            echo "✅ ${{ matrix.check.name }} passed" >> $GITHUB_STEP_SUMMARY
+            echo "✅ ${{ matrix.check.name }} passed" >> "$GITHUB_STEP_SUMMARY"
           else
-            echo "❌ ${{ matrix.check.name }} failed" >> $GITHUB_STEP_SUMMARY
+            echo "❌ ${{ matrix.check.name }} failed" >> "$GITHUB_STEP_SUMMARY"
           fi
 
   # ============================================================================
@@ -184,7 +184,7 @@ jobs:
           SERVER_PID=$!
 
           # Wait for server to start
-          for i in {1..10}; do
+          for _ in {1..10}; do
             if curl -s -o /dev/null -w "%{http_code}" http://localhost:8000 | grep -q "200"; then
               echo "✅ Documentation server is running"
               break
@@ -216,7 +216,7 @@ jobs:
             echo "| Files Generated | $(find site -type f 2>/dev/null | wc -l) |"
             echo "| HTML Files | $(find site -name '*.html' 2>/dev/null | wc -l) |"
             echo "| Total Size | $(du -sh site 2>/dev/null | cut -f1) |"
-            echo "| Build Time | ${SECONDS}s |"
+            echo "| Build Time | \"${SECONDS}\"s |"
             echo ""
 
             if [ "${{ github.event_name }}" == "pull_request" ]; then
@@ -224,7 +224,7 @@ jobs:
             elif [ "${{ github.ref }}" == "refs/heads/main" ]; then
               echo "> 🚀 Documentation will be deployed to GitHub Pages."
             fi
-          } >> $GITHUB_STEP_SUMMARY
+          } >> "$GITHUB_STEP_SUMMARY"
 
   # ============================================================================
   # 🚀 Deploy to GitHub Pages
@@ -273,7 +273,7 @@ jobs:
             echo "| ${{ job.status == 'success' && '✅ Deployed' || '❌ Failed' }} | ${{ steps.deployment.outputs.page_url }} |"
             echo ""
             echo "Deployed at: $(date -u +"%Y-%m-%d %H:%M:%S UTC")"
-          } >> $GITHUB_STEP_SUMMARY
+          } >> "$GITHUB_STEP_SUMMARY"
 
   # ============================================================================
   # 📊 PR Comment with Results
