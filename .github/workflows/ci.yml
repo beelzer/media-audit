@@ -116,7 +116,7 @@ jobs:
   # ============================================================================
 
   quality-checks:
-    name: 🎯 ${{ matrix.check.name }}
+    name: ${{ matrix.check.emoji }} ${{ matrix.check.name }}
     needs: setup-environment
     runs-on: ubuntu-latest
     timeout-minutes: 10
