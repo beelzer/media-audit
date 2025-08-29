@@ -17,6 +17,7 @@ from media_audit.domain import MediaScanner
 from media_audit.infrastructure import Config, ReportConfig, ScanConfig
 from media_audit.presentation.reports import HTMLReportGenerator, JSONReportGenerator
 from media_audit.shared import setup_logger
+from media_audit.shared.error_handler import create_error_reporter
 
 console = Console()
 
@@ -153,8 +154,15 @@ def scan(
     logger = setup_logger(level=log_level, log_file=log_file)
     logger.info("Starting media audit scan")
 
+    # Create error reporter
+    error_reporter = create_error_reporter(verbose=verbose, debug=debug)
+
     # Load configuration
-    cfg = Config.from_file(config) if config else Config()
+    try:
+        cfg = Config.from_file(config) if config else Config()
+    except Exception as e:
+        error_reporter.report_error(e, "Failed to load configuration")
+        sys.exit(1)
 
     # Override with command-line options
     if roots:
@@ -217,10 +225,13 @@ def scan(
     console.print("\n[bold cyan]📺 Media Audit Scanner[/bold cyan]\n")
     console.print(f"[dim]Scanning {len(cfg.scan.root_paths)} root path(s)...[/dim]\n")
 
-    scanner = MediaScanner(cfg.scan)
-
-    # Run async scan
-    result = asyncio.run(scanner.scan())
+    try:
+        scanner = MediaScanner(cfg.scan)
+        # Run async scan
+        result = asyncio.run(scanner.scan())
+    except Exception as e:
+        error_reporter.report_error(e, "Scan failed")
+        sys.exit(1)
 
     # Display results summary
     _display_summary(result)
@@ -228,17 +239,23 @@ def scan(
     # Generate reports
     if cfg.report.output_path:
         console.print(f"\n[cyan]Generating HTML report:[/cyan] {cfg.report.output_path}")
-        html_gen = HTMLReportGenerator()
-        html_gen.generate(result, cfg.report.output_path, cfg.report.problems_only)
+        try:
+            html_gen = HTMLReportGenerator()
+            html_gen.generate(result, cfg.report.output_path, cfg.report.problems_only)
 
-        if cfg.report.auto_open:
-            report_path = cfg.report.output_path.resolve()
-            webbrowser.open(str(report_path.as_uri()))
+            if cfg.report.auto_open:
+                report_path = cfg.report.output_path.resolve()
+                webbrowser.open(str(report_path.as_uri()))
+        except Exception as e:
+            error_reporter.report_error(e, "Failed to generate HTML report")
 
     if cfg.report.json_path:
         console.print(f"[cyan]Generating JSON report:[/cyan] {cfg.report.json_path}")
-        json_gen = JSONReportGenerator()
-        json_gen.generate(result, cfg.report.json_path)
+        try:
+            json_gen = JSONReportGenerator()
+            json_gen.generate(result, cfg.report.json_path)
+        except Exception as e:
+            error_reporter.report_error(e, "Failed to generate JSON report")
 
     # Exit with error code if issues found
     if result.total_issues > 0:
@@ -247,8 +264,14 @@ def scan(
 
 @cli.command()
 @click.argument("output", type=click.Path(path_type=Path))
-def init_config(output: Path) -> None:
+@click.option("--full", is_flag=True, help="Generate full config with all options")
+def init_config(output: Path, full: bool = False) -> None:
     """Generate a sample configuration file."""
+    # Check if file exists
+    if output.exists() and not click.confirm(f"File {output} already exists. Overwrite?"):
+        console.print("[yellow]Aborted.[/yellow]")
+        return
+
     sample_config = Config(
         scan=ScanConfig(
             root_paths=[Path("D:/Media"), Path("E:/Media")],

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import shutil
 from functools import cache
 from pathlib import Path
@@ -22,6 +23,7 @@ class FFProbe:
         if not self.ffprobe_path:
             raise RuntimeError("ffprobe not found. Please install ffmpeg.")
         self.cache = cache
+        self.logger = logging.getLogger(__name__)
 
     @staticmethod
     def _find_ffprobe() -> str | None:
@@ -70,9 +72,11 @@ class FFProbe:
                 await self.cache.set_probe_data(file_path, data)
 
             return data  # type: ignore[no-any-return]
-        except (json.JSONDecodeError, FileNotFoundError):
+        except (json.JSONDecodeError, FileNotFoundError) as e:
+            self.logger.warning(f"Failed to probe {file_path}: {e}")
             return {}
-        except Exception:
+        except Exception as e:
+            self.logger.error(f"Unexpected error probing {file_path}: {e}", exc_info=True)
             return {}
 
     async def get_video_info(self, file_path: Path) -> VideoInfo:
@@ -109,12 +113,7 @@ class FFProbe:
                     info.resolution = (int(width), int(height))
 
         except Exception as e:
-            # Log unexpected errors
-            import logging
-
-            logging.getLogger("media_audit.probe").debug(
-                f"Unexpected error probing {file_path}: {e}"
-            )
+            self.logger.debug(f"Failed to extract video info from {file_path}: {e}")
 
         return info
 

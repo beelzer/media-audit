@@ -317,8 +317,8 @@ class MediaScanner:
                             description=f"[cyan]Movies: {i}/{total_movies} - {movie.name}[/cyan]",
                         )
             except Exception as e:
-                self.logger.exception(f"Error processing movie: {e}")
-                result.errors.append(f"Error processing movie: {str(e)}")
+                self.logger.error(f"Error processing movie {movie_dir}: {e}", exc_info=True)
+                result.errors.append(f"Error processing movie {movie_dir.name}: {str(e)}")
                 if progress:
                     progress.update(movie_task, advance=1)
 
@@ -380,8 +380,8 @@ class MediaScanner:
                             description=f"[magenta]TV Series: {i}/{total_series} - {series.name}[/magenta]",
                         )
             except Exception as e:
-                self.logger.exception(f"Error processing series: {e}")
-                result.errors.append(f"Error processing series: {str(e)}")
+                self.logger.error(f"Error processing series {series_dir}: {e}", exc_info=True)
+                result.errors.append(f"Error processing series {series_dir.name}: {str(e)}")
                 if progress:
                     progress.update(tv_task, advance=1)
 
