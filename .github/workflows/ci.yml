@@ -490,14 +490,25 @@ jobs:
           enable-cache: true
           cache-dependency-glob: '**/pyproject.toml'
 
+      - name: 💾 Cache pre-commit environments
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pre-commit
+          key: pre-commit-${{ runner.os }}-${{ hashFiles('.pre-commit-config.yaml') }}-${{ hashFiles('pyproject.toml') }}
+          restore-keys: |
+            pre-commit-${{ runner.os }}-${{ hashFiles('.pre-commit-config.yaml') }}-
+            pre-commit-${{ runner.os }}-
+
       - name: 📦 Install dependencies
         run: |
           uv pip install --system -e ".[dev]"
 
       - name: 🪝 Run pre-commit hooks
+        env:
+          # Skip tools that have external dependencies or network issues
+          SKIP: prettier,markdownlint,cspell,markdown-link-check,mkdocs-build,pytest
         run: |
-          # Skip Node.js-based tools that may have npm registry issues
-          SKIP=prettier,markdownlint,cspell,markdown-link-check,mkdocs-build,pytest pre-commit run --all-files --verbose
+          pre-commit run --all-files --show-diff-on-failure --color=always
 
   # ============================================================================
   # 📊 Results Summary
