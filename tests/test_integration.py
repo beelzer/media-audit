@@ -7,7 +7,7 @@ import contextlib
 import tempfile
 from datetime import datetime
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -17,7 +17,6 @@ from media_audit.domain.parsing import MovieParser, TVParser
 from media_audit.domain.patterns import get_patterns
 from media_audit.domain.validation import MediaValidator
 from media_audit.infrastructure import ScanConfig
-from media_audit.infrastructure.probe import FFProbe
 from media_audit.presentation.reports import HTMLReportGenerator, JSONReportGenerator
 
 
@@ -58,25 +57,6 @@ def temp_media_structure():
         (series1 / "Season01.jpg").touch()
 
         yield base_path
-
-
-@pytest.fixture
-def mock_ffprobe():
-    """Create a mock FFProbe instance."""
-    probe = AsyncMock(spec=FFProbe)
-    probe.probe = AsyncMock(
-        return_value={
-            "format": {"duration": "7200.0", "bit_rate": "5000000", "size": "4500000000"},
-            "streams": [
-                {"codec_type": "video", "codec_name": "hevc", "width": 1920, "height": 1080}
-            ],
-        }
-    )
-    probe.get_video_info = AsyncMock()
-    probe.get_video_info.return_value = MagicMock(
-        codec="hevc", resolution=(1920, 1080), duration=7200.0, bitrate=5000000, size=4500000000
-    )
-    return probe
 
 
 class TestEndToEndScanning:
@@ -173,7 +153,7 @@ class TestMovieParsing:
         assert movie.path == movies_dir
 
     @pytest.mark.asyncio
-    async def test_movie_validation_integration(self, temp_media_structure, mock_ffprobe):
+    async def test_movie_validation_integration(self, temp_media_structure):
         """Test movie validation with assets and video info."""
         movies_dir = temp_media_structure / "Movies" / "The Matrix (1999)"
         patterns = get_patterns(["plex"])
@@ -182,21 +162,29 @@ class TestMovieParsing:
         from media_audit.infrastructure import ScanConfig
 
         config = ScanConfig(profiles=["plex"])
-        validator = MediaValidator(config)
 
-        movie = await parser.parse(movies_dir)
-        assert movie is not None
+        # Mock the probe_video function that validator uses
+        mock_video_info = MagicMock()
+        mock_video_info.codec = None
+        mock_video_info.resolution = (1920, 1080)
+        mock_video_info.duration = 7200.0
+        mock_video_info.bitrate = 5000000
+        mock_video_info.size = 4500000000
 
-        # Add mock video info
-        movie.video = mock_ffprobe.get_video_info.return_value
+        with patch("media_audit.domain.validation.validator.probe_video") as mock_probe:
+            mock_probe.return_value = mock_video_info
+            validator = MediaValidator(config)
 
-        # Validate
-        await validator.validate(movie)
+            movie = await parser.parse(movies_dir)
+            assert movie is not None
 
-        # Check validation results
-        assert movie.status in [ValidationStatus.VALID, ValidationStatus.WARNING]
-        assert len(movie.assets.posters) > 0
-        assert len(movie.assets.backgrounds) > 0
+            # Validate
+            await validator.validate(movie)
+
+            # Check validation results
+            assert movie.status in [ValidationStatus.VALID, ValidationStatus.WARNING]
+            assert len(movie.assets.posters) > 0
+            assert len(movie.assets.backgrounds) > 0
 
 
 class TestTVShowParsing:

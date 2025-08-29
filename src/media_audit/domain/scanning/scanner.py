@@ -122,6 +122,10 @@ class MediaScanner:
         else:
             # On Unix-like systems, use termios
             try:
+                # Check if stdin is available and is a tty
+                if not hasattr(sys.stdin, "fileno") or not sys.stdin.isatty():
+                    return  # Skip in non-interactive environments (CI, redirected input)
+
                 import select
                 import termios
                 import tty
@@ -141,8 +145,8 @@ class MediaScanner:
                                 break
                 finally:
                     termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
-            except ImportError:
-                # If termios not available, skip keyboard monitoring
+            except (ImportError, OSError, AttributeError):
+                # Windows, non-interactive environment, or CI
                 pass
 
     def is_cancelled(self) -> bool:
