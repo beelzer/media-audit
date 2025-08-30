@@ -318,11 +318,11 @@ class ProgressTracker:
     def _monitor_esc(self) -> None:
         """Monitor for ESC key on Windows."""
         try:
-            import msvcrt
+            import msvcrt  # type: ignore[import-not-found,unused-ignore]
 
             while not self.is_cancelled():
-                if msvcrt.kbhit():
-                    key = msvcrt.getch()
+                if msvcrt.kbhit():  # type: ignore[attr-defined,unused-ignore]
+                    key = msvcrt.getch()  # type: ignore[attr-defined,unused-ignore]
                     if key == b"\x1b":
                         self.cancel()
                         self.console.print("\n[yellow]Scan cancelled[/yellow]")
