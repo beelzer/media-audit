@@ -13,6 +13,7 @@ from rich.progress import (
     BarColumn,
     Progress,
     ProgressColumn,
+    Task,
     TaskProgressColumn,
     TextColumn,
     TimeElapsedColumn,
@@ -23,10 +24,10 @@ if TYPE_CHECKING:
     from .config import ScannerConfig
 
 
-class CacheStatsColumn(ProgressColumn):
+class CacheStatsColumn(ProgressColumn):  # type: ignore[misc]
     """Custom column to show completed/total [cached] stats."""
 
-    def render(self, task) -> Text:
+    def render(self, task: Task) -> Text:
         """Render the cache stats."""
         completed = int(task.completed)
         total = task.total if task.total is not None else 0
@@ -53,15 +54,15 @@ class ProgressTracker:
         self.console = Console()
         self._cancelled = False
         self._cancel_lock = threading.Lock()
-        self._progress = None
+        self._progress: Progress | None = None
 
         # Track tasks for each root
         self._root_tasks: dict[Path, int] = {}
         self._root_totals: dict[Path, int] = {}
         self._root_cache_hits: dict[Path, int] = {}  # Track cache hits per root
-        self._current_root = None
-        self._discovery_task = None
-        self._season_task = None  # Track current season scanning task
+        self._current_root: Path | None = None
+        self._discovery_task: int | None = None
+        self._season_task: int | None = None  # Track current season scanning task
 
     def start(self) -> None:
         """Start progress tracking."""

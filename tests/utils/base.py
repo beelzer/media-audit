@@ -119,6 +119,7 @@ class TestContext:
             patcher.stop()
 
         import contextlib
+
         for cleanup_func in reversed(self._cleanup_funcs):
             with contextlib.suppress(Exception):
                 cleanup_func()
@@ -140,6 +141,7 @@ def isolated_test_env(base_path: Path | None = None):
         yield temp_dir
     finally:
         import contextlib
+
         with contextlib.suppress(Exception):
             shutil.rmtree(temp_dir, ignore_errors=True)
 

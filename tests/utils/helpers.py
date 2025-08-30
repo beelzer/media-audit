@@ -91,6 +91,7 @@ class AsyncTestRunner:
             if not task.done():
                 task.cancel()
                 import contextlib
+
                 with contextlib.suppress(asyncio.CancelledError):
                     await task
         self.tasks.clear()
@@ -183,10 +184,14 @@ def assert_files_equal(file1: Path, file2: Path, ignore_lines: list[str] = None)
 
     if ignore_lines:
         lines1 = [
-            line for line in content1.splitlines() if not any(ignore in line for ignore in ignore_lines)
+            line
+            for line in content1.splitlines()
+            if not any(ignore in line for ignore in ignore_lines)
         ]
         lines2 = [
-            line for line in content2.splitlines() if not any(ignore in line for ignore in ignore_lines)
+            line
+            for line in content2.splitlines()
+            if not any(ignore in line for ignore in ignore_lines)
         ]
         content1 = "\n".join(lines1)
         content2 = "\n".join(lines2)

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import concurrent.futures
+from collections.abc import Callable
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -37,7 +38,7 @@ class MediaProcessor:
         self.tv_parser = TVParser(compiled, cache=self.cache)
 
         # Episode progress tracking
-        self.episode_progress_callback = None
+        self.episode_progress_callback: Callable[[int, int, str, bool], None] | None = None
         self.current_episode_num = 0
         self.total_episodes = 0
 
@@ -69,6 +70,7 @@ class MediaProcessor:
                 initial_hits = getattr(self.cache, "hits", 0)
 
             # Determine media type
+            result: SeriesItem | MovieItem | None
             if self._is_tv_series(path):
                 result = self._process_series(path)
             else:
@@ -120,14 +122,14 @@ class MediaProcessor:
             self.logger.error(f"Error processing movie {path}: {e}")
             return None
 
-    def set_episode_progress_callback(self, callback, total_episodes):
+    def set_episode_progress_callback(self, callback: object, total_episodes: int) -> None:
         """Set callback for episode progress updates."""
-        self.episode_progress_callback = callback
+        self.episode_progress_callback = callback  # type: ignore[assignment]
         self.current_episode_num = 0
         self.total_episodes = total_episodes
 
         # Create internal callback for the parser
-        def parser_callback(episode_name, video_path, phase):
+        def parser_callback(episode_name: str, video_path: object, phase: str) -> None:
             if phase == "start":
                 # Don't increment on start, just show message
                 if self.episode_progress_callback:

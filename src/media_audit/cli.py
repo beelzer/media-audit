@@ -12,6 +12,7 @@ from rich.table import Table
 
 from media_audit.presentation.reports import HTMLReportGenerator, JSONReportGenerator
 from media_audit.scanner import Scanner, ScannerConfig
+from media_audit.scanner.results import ScanResults
 from media_audit.shared import setup_logger
 
 console = Console()
@@ -172,7 +173,7 @@ def scan(
         sys.exit(1)
 
 
-def _display_summary(results) -> None:
+def _display_summary(results: ScanResults) -> None:
     """Display scan results summary."""
     stats = results.get_stats()
 
@@ -215,7 +216,7 @@ def _display_summary(results) -> None:
             console.print(f"\n[dim]... and {results.total_issues - 5} more issues[/dim]")
 
 
-def _generate_reports(config: ScannerConfig, results) -> None:
+def _generate_reports(config: ScannerConfig, results: ScanResults) -> None:
     """Generate HTML and JSON reports."""
     # Convert to old format for compatibility
     from media_audit.core import ScanResult

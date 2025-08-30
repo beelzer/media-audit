@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import re
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -30,9 +31,11 @@ class TVParser(BaseParser):
         """Initialize TV parser."""
         super().__init__(*args, **kwargs)
         self.logger = get_logger("parser.tv")
-        self.episode_callback = None  # Callback for episode progress
+        self.episode_callback: Callable[[str, object, str], None] | None = (
+            None  # Callback for episode progress
+        )
 
-    def set_episode_callback(self, callback):
+    def set_episode_callback(self, callback: Callable[[str, object, str], None]) -> None:
         """Set callback for episode progress updates."""
         self.episode_callback = callback
 

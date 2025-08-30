@@ -8,9 +8,13 @@ from typing import TYPE_CHECKING, Any
 
 from media_audit.shared.logging import get_logger
 
+from .discovery import PathDiscovery
+from .processor import MediaProcessor
+from .progress import ProgressTracker
+from .results import ScanResults
+
 if TYPE_CHECKING:
     from .config import ScannerConfig
-    from .results import ScanResults
 
 
 class Scanner:
@@ -23,44 +27,36 @@ class Scanner:
         self._start_time = 0.0
 
         # Initialize components lazily
-        self._discovery = None
-        self._processor = None
-        self._progress = None
-        self._results = None
+        self._discovery: PathDiscovery | None = None
+        self._processor: MediaProcessor | None = None
+        self._progress: ProgressTracker | None = None
+        self._results: ScanResults | None = None
 
     @property
-    def discovery(self):
+    def discovery(self) -> PathDiscovery:
         """Lazy-load path discovery component."""
         if self._discovery is None:
-            from .discovery import PathDiscovery
-
             self._discovery = PathDiscovery(self.config)
         return self._discovery
 
     @property
-    def processor(self):
+    def processor(self) -> MediaProcessor:
         """Lazy-load media processor component."""
         if self._processor is None:
-            from .processor import MediaProcessor
-
             self._processor = MediaProcessor(self.config)
         return self._processor
 
     @property
-    def progress(self):
+    def progress(self) -> ProgressTracker:
         """Lazy-load progress tracker component."""
         if self._progress is None:
-            from .progress import ProgressTracker
-
             self._progress = ProgressTracker(self.config)
         return self._progress
 
     @property
-    def results(self):
+    def results(self) -> ScanResults:
         """Lazy-load results container."""
         if self._results is None:
-            from .results import ScanResults
-
             self._results = ScanResults()
         return self._results
 

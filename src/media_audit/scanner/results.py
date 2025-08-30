@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
 
-from media_audit.core import MovieItem, SeriesItem, ValidationStatus
+from media_audit.core import EpisodeItem, MovieItem, SeasonItem, SeriesItem, ValidationStatus
 
 
 @dataclass
@@ -84,9 +84,9 @@ class ScanResults:
 
         return self._total_issues
 
-    def get_items_with_issues(self) -> list[Any]:
+    def get_items_with_issues(self) -> list[MovieItem | SeriesItem | SeasonItem | EpisodeItem]:
         """Get all items that have issues."""
-        items = []
+        items: list[MovieItem | SeriesItem | SeasonItem | EpisodeItem] = []
 
         # Check movies
         for movie in self.movies:
@@ -114,7 +114,6 @@ class ScanResults:
         """Get statistics about the scan."""
         error_count = 0
         warning_count = 0
-        info_count = 0
 
         # Count all issues by severity
         for item in self.get_items_with_issues():
@@ -124,8 +123,6 @@ class ScanResults:
                         error_count += 1
                     case ValidationStatus.WARNING:
                         warning_count += 1
-                    case ValidationStatus.INFO:
-                        info_count += 1
 
         return {
             "scan_time": self.scan_time.isoformat(),
@@ -136,7 +133,6 @@ class ScanResults:
             "total_issues": self.total_issues,
             "errors": error_count,
             "warnings": warning_count,
-            "info": info_count,
             "scan_errors": len(self.errors),
             "cancelled": self.cancelled,
         }

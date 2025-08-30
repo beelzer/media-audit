@@ -6,7 +6,7 @@ This test suite provides a comprehensive and flexible testing foundation for the
 
 ## Structure
 
-```
+```text
 tests/
 ├── conftest.py          # Shared fixtures and pytest configuration
 ├── unit/                # Unit tests for individual components
@@ -210,7 +210,7 @@ async def test_integration():
 ## Best Practices
 
 1. **Use Factories**: Prefer factories over manual object creation
-2. **Mock External Dependencies**: Always mock FFProbe, file system, etc.
+2. **Mock External Dependencies**: Always mock FFprobe, file system, etc.
 3. **Test Isolation**: Each test should be independent
 4. **Clear Assertions**: Use domain-specific assertions for clarity
 5. **Parametrize Tests**: Use pytest.mark.parametrize for multiple scenarios
