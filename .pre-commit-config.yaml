@@ -40,7 +40,13 @@ repos:
     hooks:
       - id: mypy
         files: ^src/
-        args: [--strict, --no-implicit-reexport]
+        args:
+          [
+            --config-file=pyproject.toml,
+            --show-column-numbers,
+            --show-error-context,
+            --pretty,
+          ]
         additional_dependencies:
           - types-pyyaml
           - pydantic

@@ -14,6 +14,7 @@ from rich.progress import (
     Progress,
     ProgressColumn,
     Task,
+    TaskID,
     TaskProgressColumn,
     TextColumn,
     TimeElapsedColumn,
@@ -24,7 +25,7 @@ if TYPE_CHECKING:
     from .config import ScannerConfig
 
 
-class CacheStatsColumn(ProgressColumn):  # type: ignore[misc]
+class CacheStatsColumn(ProgressColumn):
     """Custom column to show completed/total [cached] stats."""
 
     def render(self, task: Task) -> Text:
@@ -57,12 +58,12 @@ class ProgressTracker:
         self._progress: Progress | None = None
 
         # Track tasks for each root
-        self._root_tasks: dict[Path, int] = {}
+        self._root_tasks: dict[Path, TaskID] = {}
         self._root_totals: dict[Path, int] = {}
         self._root_cache_hits: dict[Path, int] = {}  # Track cache hits per root
         self._current_root: Path | None = None
-        self._discovery_task: int | None = None
-        self._season_task: int | None = None  # Track current season scanning task
+        self._discovery_task: TaskID | None = None
+        self._season_task: TaskID | None = None  # Track current season scanning task
 
     def start(self) -> None:
         """Start progress tracking."""
